@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var viewModel = TodoViewModel()
+    @Environment(TodoViewModel.self) private var viewModel
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         VStack(spacing: 0) {
             // Partition cards + Completed section
             ScrollView {
@@ -83,5 +84,6 @@ struct PartitionDragHandle: View {
 
 #Preview {
     ContentView()
+        .environment(TodoViewModel())
         .frame(width: 400, height: 750)
 }

@@ -6,6 +6,7 @@ struct PartitionEditView: View {
 
     @State private var editName: String
     @State private var editColor: PartitionColor
+    @FocusState private var isNameFocused: Bool
 
     init(partition: Partition, onSave: @escaping (String, PartitionColor) -> Void) {
         self.partition = partition
@@ -22,6 +23,7 @@ struct PartitionEditView: View {
                 })
                 .textFieldStyle(.plain)
                 .font(.system(size: 12, weight: .bold))
+                .focused($isNameFocused)
 
                 Button {
                     onSave(editName.isEmpty ? "Untitled" : editName, editColor)
@@ -52,5 +54,8 @@ struct PartitionEditView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.background.opacity(0.5))
+        .onAppear {
+            isNameFocused = true
+        }
     }
 }

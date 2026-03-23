@@ -15,6 +15,22 @@ struct TodoAppApp: App {
             // Replace the default "New Window" command
             CommandGroup(replacing: .newItem) { }
 
+            // Remove Edit menu
+            CommandGroup(replacing: .undoRedo) { }
+            CommandGroup(replacing: .pasteboard) { }
+
+            // Remove View menu
+            CommandGroup(replacing: .toolbar) { }
+            CommandGroup(replacing: .sidebar) { }
+
+            // Remove Window menu
+            CommandGroup(replacing: .windowSize) { }
+            CommandGroup(replacing: .windowList) { }
+            CommandGroup(replacing: .singleWindowList) { }
+
+            // Remove Help menu
+            CommandGroup(replacing: .help) { }
+
             // Custom Partition menu
             CommandMenu("Partition") {
                 Button("New Partition...") {
