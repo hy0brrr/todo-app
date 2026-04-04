@@ -9,7 +9,7 @@ struct TodoAppApp: App {
             ContentView()
                 .environment(viewModel)
         }
-        .windowStyle(.titleBar)
+        .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 400, height: 750)
         .commands {
             // Replace the default "New Window" command

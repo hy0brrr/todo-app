@@ -24,7 +24,7 @@ struct PartitionView: View {
                 partitionHeader
             }
 
-            Divider().opacity(0.3)
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Task list
             ScrollView {
@@ -42,55 +42,82 @@ struct PartitionView: View {
 
                 if tasks.isEmpty {
                     Text("No tasks yet.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                         .italic()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
+                        .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
                 }
             }
 
-            Divider().opacity(0.3)
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Add task input
             addTaskBar
         }
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        .background(cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
+        .overlay {
+            if #unavailable(macOS 26.0) {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            }
+        }
+        .shadow(
+            color: .black.opacity(DesignTokens.Shadow.cardOpacity),
+            radius: DesignTokens.Shadow.cardRadius,
+            y: DesignTokens.Shadow.cardYOffset
         )
-        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
     }
 
     private var partitionHeader: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(partition.color.color)
-                .frame(width: 8, height: 8)
+        HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardTitleGap) {
+                Text(partition.name.isEmpty ? "Untitled" : partition.name)
+                    .font(DesignTokens.Typography.partitionHeader)
+                    .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
-            Text(partition.name.isEmpty ? "Untitled" : partition.name)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
+                Text("\(tasks.count) items")
+                    .font(DesignTokens.Typography.partitionMeta)
+                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                    .padding(.horizontal, DesignTokens.Spacing.titlePillHorizontal)
+                    .padding(.vertical, DesignTokens.Spacing.titlePillVertical)
+                    .background(
+                        Capsule()
+                            .fill(DesignTokens.ColorRole.pillBackground)
+                    )
+            }
             Spacer()
 
-            if isHoveringHeader {
-                Button {
-                    onStartEdit()
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .trailing, spacing: 8) {
+                Text(partition.color.emoji)
+                    .font(DesignTokens.Typography.emoji)
+                    .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.emojiPlate, style: .continuous)
+                            .fill(DesignTokens.ColorRole.emojiPlateBackground)
+                    )
+
+                if isHoveringHeader {
+                    Button {
+                        onStartEdit()
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(DesignTokens.Typography.icon)
+                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(DesignTokens.ColorRole.pillBackground)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+        .padding(.vertical, DesignTokens.Spacing.sectionPaddingVerticalRelaxed)
         .onHover { hovering in
             isHoveringHeader = hovering
         }
@@ -99,12 +126,18 @@ struct PartitionView: View {
     private var addTaskBar: some View {
         HStack(spacing: 6) {
             Image(systemName: "plus")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(DesignTokens.Typography.icon)
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
-            TextField("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name)...", text: $newTaskName)
+            TextField(
+                "",
+                text: $newTaskName,
+                prompt: Text("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name)...")
+                    .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
+            )
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(DesignTokens.Typography.body)
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .onSubmit {
                     let trimmed = newTaskName.trimmingCharacters(in: .whitespaces)
                     guard !trimmed.isEmpty else { return }
@@ -112,8 +145,44 @@ struct PartitionView: View {
                     newTaskName = ""
                 }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+        .padding(.vertical, 10)
+        .background(DesignTokens.ColorRole.footerBackground)
+    }
+
+    private var cardBackground: some View {
+        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+
+        return ZStack {
+            if #available(macOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular, in: cardShape)
+                    .environment(\.appearsActive, true)
+
+                cardShape
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            } else {
+                ZStack {
+                    cardShape
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    DesignTokens.ColorRole.cardBackgroundTop,
+                                    DesignTokens.ColorRole.cardBackgroundBottom
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    cardShape
+                        .fill(Color.white.opacity(0.08))
+
+                    cardShape
+                        .fill(.ultraThinMaterial)
+                }
+            }
+        }
     }
 }
 

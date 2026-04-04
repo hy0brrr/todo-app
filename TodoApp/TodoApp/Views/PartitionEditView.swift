@@ -18,19 +18,32 @@ struct PartitionEditView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                TextField("Partition Name", text: $editName, onCommit: {
-                    onSave(editName.isEmpty ? "Untitled" : editName, editColor)
-                })
+                TextField(
+                    "",
+                    text: $editName,
+                    prompt: Text("Partition Name")
+                        .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
+                )
                 .textFieldStyle(.plain)
-                .font(.system(size: 12, weight: .bold))
+                .font(DesignTokens.Typography.captionStrong)
+                .padding(.horizontal, DesignTokens.Spacing.inputHorizontal)
+                .padding(.vertical, DesignTokens.Spacing.inputVertical)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.field, style: .continuous)
+                        .fill(DesignTokens.ColorRole.inputBackground)
+                )
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .focused($isNameFocused)
+                .onSubmit {
+                    onSave(editName.isEmpty ? "Untitled" : editName, editColor)
+                }
 
                 Button {
                     onSave(editName.isEmpty ? "Untitled" : editName, editColor)
                 } label: {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.blue)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(DesignTokens.ColorRole.accent)
                 }
                 .buttonStyle(.plain)
             }
@@ -39,10 +52,10 @@ struct PartitionEditView: View {
                 ForEach(PartitionColor.allCases, id: \.self) { c in
                     Circle()
                         .fill(c.color)
-                        .frame(width: 14, height: 14)
+                        .frame(width: DesignTokens.Size.partitionColorDot, height: DesignTokens.Size.partitionColorDot)
                         .overlay(
                             Circle()
-                                .strokeBorder(editColor == c ? Color.blue : Color.clear, lineWidth: 2)
+                                .strokeBorder(editColor == c ? DesignTokens.ColorRole.accent : Color.clear, lineWidth: 2)
                                 .padding(-2)
                         )
                         .onTapGesture {
@@ -51,9 +64,9 @@ struct PartitionEditView: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.background.opacity(0.5))
+        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+        .padding(.vertical, DesignTokens.Spacing.sectionPaddingVertical)
+        .background(DesignTokens.ColorRole.editPanelBackground)
         .onAppear {
             isNameFocused = true
         }

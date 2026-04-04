@@ -104,6 +104,59 @@ class TodoViewModel {
 
     func updatePartitionHeight(_ id: String, height: CGFloat) {
         guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
-        partitions[index].height = max(80, height)
+        partitions[index].height = max(DesignTokens.Size.partitionMinHeight, height)
+    }
+
+    func adjustPartitionHeight(_ id: String, delta: CGFloat) {
+        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+        partitions[index].height = max(
+            DesignTokens.Size.partitionMinHeight,
+            partitions[index].height + delta
+        )
+    }
+
+    func resizeBoundary(
+        after id: String,
+        delta: CGFloat,
+        maxTotalPartitionHeights: CGFloat
+    ) {
+        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+        let minHeight = DesignTokens.Size.partitionMinHeight
+
+        if index < partitions.count - 1 {
+            let currentHeight = partitions[index].height
+            let nextHeight = partitions[index + 1].height
+            let maxShrinkCurrent = currentHeight - minHeight
+
+            if delta < 0 {
+                let clampedDelta = max(delta, -maxShrinkCurrent)
+                partitions[index].height = currentHeight + clampedDelta
+                partitions[index + 1].height = nextHeight - clampedDelta
+                return
+            }
+
+            let nextShrinkBudget = max(0, nextHeight - minHeight)
+            let totalHeights = partitions.reduce(CGFloat.zero) { partialResult, partition in
+                partialResult + partition.height
+            }
+            let completedShrinkBudget = max(0, maxTotalPartitionHeights - totalHeights)
+            let allowedGrowth = nextShrinkBudget + completedShrinkBudget
+            let clampedDelta = min(delta, allowedGrowth)
+            let consumedFromNext = min(clampedDelta, nextShrinkBudget)
+
+            partitions[index].height = currentHeight + clampedDelta
+            partitions[index + 1].height = nextHeight - consumedFromNext
+            return
+        }
+
+        let currentHeight = partitions[index].height
+        let totalHeights = partitions.reduce(CGFloat.zero) { partialResult, partition in
+            partialResult + partition.height
+        }
+        let remainingGrowBudget = max(0, maxTotalPartitionHeights - totalHeights)
+        let maxShrink = currentHeight - minHeight
+        let clampedDelta = min(max(delta, -maxShrink), remainingGrowBudget)
+
+        partitions[index].height = currentHeight + clampedDelta
     }
 }

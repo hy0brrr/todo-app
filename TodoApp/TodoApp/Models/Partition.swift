@@ -32,4 +32,15 @@ enum PartitionColor: String, CaseIterable, Equatable {
         case .orange: return .orange
         }
     }
+
+    var emoji: String {
+        switch self {
+        case .blue: return "🫧"
+        case .green: return "🥝"
+        case .red: return "🌶️"
+        case .yellow: return "🌼"
+        case .purple: return "🔮"
+        case .orange: return "🍊"
+        }
+    }
 }

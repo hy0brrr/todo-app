@@ -13,21 +13,22 @@ struct ManagePartitionsView: View {
             // Header
             HStack {
                 Text("Manage Partitions")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(DesignTokens.Typography.modalTitle)
+                    .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 Spacer()
                 Button {
                     onDismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.Spacing.modalHorizontal)
+            .padding(.vertical, DesignTokens.Spacing.modalHeaderVertical)
 
-            Divider()
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Partition list
             List {
@@ -39,10 +40,11 @@ struct ManagePartitionsView: View {
 
                         Circle()
                             .fill(partition.color.color)
-                            .frame(width: 10, height: 10)
+                            .frame(width: DesignTokens.Size.modalPartitionDot, height: DesignTokens.Size.modalPartitionDot)
 
                         Text(partition.name.isEmpty ? "Untitled" : partition.name)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(DesignTokens.Typography.bodyMedium)
+                            .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
                         Spacer()
 
@@ -51,12 +53,12 @@ struct ManagePartitionsView: View {
                             showDeleteConfirmation = true
                         } label: {
                             Image(systemName: "trash")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, DesignTokens.Spacing.modalListRowVertical)
                 }
                 .onMove { source, destination in
                     partitions.move(fromOffsets: source, toOffset: destination)
@@ -64,7 +66,7 @@ struct ManagePartitionsView: View {
             }
             .listStyle(.inset)
 
-            Divider()
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Footer buttons
             HStack {
@@ -80,11 +82,15 @@ struct ManagePartitionsView: View {
                 .controlSize(.small)
                 .buttonStyle(.borderedProminent)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, DesignTokens.Spacing.modalHorizontal)
+            .padding(.vertical, DesignTokens.Spacing.modalFooterVertical)
         }
-        .frame(minHeight: 300, maxHeight: 500)
-        .frame(width: 320)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .frame(minHeight: DesignTokens.Size.modalMinHeight, maxHeight: DesignTokens.Size.modalMaxHeight)
+        .frame(width: DesignTokens.Size.modalWidth)
         .alert("Delete Partition?", isPresented: $showDeleteConfirmation, presenting: partitionToDelete) { partition in
             Button("Cancel", role: .cancel) {
                 partitionToDelete = nil

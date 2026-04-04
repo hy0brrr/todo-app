@@ -7,23 +7,36 @@ struct CompletedSectionView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 8, height: 8)
+            HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardTitleGap) {
+                    Text("Completed")
+                        .font(DesignTokens.Typography.partitionHeader)
+                        .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
-                Text("Completed")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-
+                    Text("\(tasks.count) archived")
+                        .font(DesignTokens.Typography.partitionMeta)
+                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                        .padding(.horizontal, DesignTokens.Spacing.titlePillHorizontal)
+                        .padding(.vertical, DesignTokens.Spacing.titlePillVertical)
+                        .background(
+                            Capsule()
+                                .fill(DesignTokens.ColorRole.pillBackground)
+                        )
+                }
                 Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
 
-            Divider().opacity(0.3)
+                Text("☁️")
+                    .font(DesignTokens.Typography.emoji)
+                    .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.emojiPlate, style: .continuous)
+                            .fill(DesignTokens.ColorRole.emojiPlateBackground)
+                    )
+            }
+            .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+            .padding(.vertical, DesignTokens.Spacing.sectionPaddingVerticalRelaxed)
+
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Completed tasks list
             ScrollView {
@@ -41,21 +54,62 @@ struct CompletedSectionView: View {
 
                 if tasks.isEmpty {
                     Text("No completed tasks.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                         .italic()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
+                        .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
                 }
             }
         }
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        .background(cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
+        .overlay {
+            if #unavailable(macOS 26.0) {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            }
+        }
+        .shadow(
+            color: .black.opacity(DesignTokens.Shadow.cardOpacity),
+            radius: DesignTokens.Shadow.cardRadius,
+            y: DesignTokens.Shadow.cardYOffset
         )
-        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+    }
+
+    private var cardBackground: some View {
+        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+
+        return ZStack {
+            if #available(macOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular, in: cardShape)
+                    .environment(\.appearsActive, true)
+
+                cardShape
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            } else {
+                ZStack {
+                    cardShape
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    DesignTokens.ColorRole.cardBackgroundTop,
+                                    DesignTokens.ColorRole.cardBackgroundBottom
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    cardShape
+                        .fill(Color.white.opacity(0.04))
+
+                    cardShape
+                        .fill(.ultraThinMaterial)
+                }
+            }
+        }
     }
 }
 

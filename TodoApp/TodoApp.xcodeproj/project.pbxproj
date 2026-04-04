@@ -18,6 +18,8 @@
 		A1000009 /* CompletedSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000009 /* CompletedSectionView.swift */; };
 		A100000A /* ManagePartitionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000A /* ManagePartitionsView.swift */; };
 		A100000B /* DateHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B /* DateHelpers.swift */; };
+		A100000C /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* DesignTokens.swift */; };
+		A100000D /* WindowChromeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* WindowChromeController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +35,8 @@
 		B1000009 /* CompletedSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSectionView.swift; sourceTree = "<group>"; };
 		B100000A /* ManagePartitionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePartitionsView.swift; sourceTree = "<group>"; };
 		B100000B /* DateHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateHelpers.swift; sourceTree = "<group>"; };
+		B100000C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		B100000D /* WindowChromeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowChromeController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +112,8 @@
 			isa = PBXGroup;
 			children = (
 				B100000B /* DateHelpers.swift */,
+				B100000C /* DesignTokens.swift */,
+				B100000D /* WindowChromeController.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -175,6 +181,8 @@
 				A1000009 /* CompletedSectionView.swift in Sources */,
 				A100000A /* ManagePartitionsView.swift in Sources */,
 				A100000B /* DateHelpers.swift in Sources */,
+				A100000C /* DesignTokens.swift in Sources */,
+				A100000D /* WindowChromeController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -67,7 +67,7 @@ struct TaskItemView: View {
     @State private var clickHandler = ClickOutsideHandler()
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 9) {
             // Completion checkbox
             Button {
                 onToggleComplete(task.id)
@@ -76,25 +76,25 @@ struct TaskItemView: View {
                     Circle()
                         .strokeBorder(
                             task.isCompleted
-                                ? Color.gray
-                                : (isHoveringCheckbox ? Color.blue : Color.gray.opacity(0.5)),
-                            lineWidth: 1.5
+                                ? DesignTokens.ColorRole.successMuted
+                                : (isHoveringCheckbox ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText),
+                            lineWidth: DesignTokens.Stroke.checkboxLineWidth
                         )
-                        .frame(width: 14, height: 14)
+                        .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
                         .background(
                             Circle()
-                                .fill(task.isCompleted ? Color.gray : Color.clear)
+                                .fill(task.isCompleted ? DesignTokens.ColorRole.successMuted : Color.clear)
                         )
                     if task.isCompleted {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(DesignTokens.Typography.checkmark)
                             .foregroundStyle(.white)
                     }
                 }
-                .frame(width: 24, height: 24)
+                .frame(width: DesignTokens.Size.checkboxTapTarget, height: DesignTokens.Size.checkboxTapTarget)
                 .contentShape(Rectangle())
-                .scaleEffect(isHoveringCheckbox ? 1.15 : 1.0)
-                .animation(.easeInOut(duration: 0.15), value: isHoveringCheckbox)
+                .scaleEffect(isHoveringCheckbox ? DesignTokens.Motion.hoverScale : 1.0)
+                .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringCheckbox)
             }
             .buttonStyle(.plain)
             .onHover { isHoveringCheckbox = $0 }
@@ -103,7 +103,14 @@ struct TaskItemView: View {
             if isEditing {
                 TextField("Task name", text: $editingName)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 13))
+                    .font(DesignTokens.Typography.body)
+                    .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                    .padding(.horizontal, DesignTokens.Spacing.inputHorizontal)
+                    .padding(.vertical, DesignTokens.Spacing.inputVertical)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.field, style: .continuous)
+                            .fill(DesignTokens.ColorRole.inputBackground)
+                    )
                     .focused($isNameFieldFocused)
                     .onSubmit {
                         commitRename()
@@ -122,11 +129,11 @@ struct TaskItemView: View {
                     }
             } else {
                 Text(task.name)
-                    .font(.system(size: 13))
+                    .font(DesignTokens.Typography.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
-                    .strikethrough(task.isCompleted, color: .secondary)
+                    .foregroundStyle(task.isCompleted ? DesignTokens.ColorRole.secondaryText : DesignTokens.ColorRole.primaryText)
+                    .strikethrough(task.isCompleted, color: DesignTokens.ColorRole.secondaryText)
                     .onTapGesture(count: 2) {
                         guard !task.isCompleted else { return }
                         editingName = task.name
@@ -145,16 +152,17 @@ struct TaskItemView: View {
                             showDatePicker.toggle()
                         } label: {
                             Text(DateHelpers.formatDueDate(dueDate))
-                                .font(.system(size: 10))
-                                .foregroundStyle(
-                                    isHoveringDueDate
-                                        ? .blue
-                                        : (DateHelpers.isOverdue(dueDate) ? .red : .blue)
+                                .font(DesignTokens.Typography.micro)
+                                .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(
+                                    Capsule()
+                                        .fill(DesignTokens.ColorRole.pillBackground)
                                 )
-                                .fontWeight(.medium)
-                                .underline()
-                                .scaleEffect(isHoveringDueDate ? 1.05 : 1.0)
-                                .animation(.easeInOut(duration: 0.15), value: isHoveringDueDate)
+                                .scaleEffect(isHoveringDueDate ? DesignTokens.Motion.dueDateHoverScale : 1.0)
+                                .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringDueDate)
                         }
                         .buttonStyle(.plain)
                         .onHover { isHoveringDueDate = $0 }
@@ -177,8 +185,8 @@ struct TaskItemView: View {
                         }
                     } else {
                         Text(DateHelpers.formatDueDate(dueDate))
-                            .font(.system(size: 10))
-                            .foregroundStyle(DateHelpers.isOverdue(dueDate) ? .red : .secondary)
+                            .font(DesignTokens.Typography.micro)
+                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                             .fontWeight(DateHelpers.isOverdue(dueDate) ? .medium : .regular)
                     }
                 } else {
@@ -187,12 +195,12 @@ struct TaskItemView: View {
                         showDatePicker.toggle()
                     } label: {
                         Image(systemName: "calendar")
-                            .font(.system(size: 11))
-                            .foregroundStyle(isHoveringCalendar ? .blue : .secondary)
-                            .frame(width: 20, height: 20)
+                            .font(DesignTokens.Typography.icon)
+                            .foregroundStyle(isHoveringCalendar ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText)
+                            .frame(width: DesignTokens.Size.trailingControl, height: DesignTokens.Size.trailingControl)
                             .contentShape(Rectangle())
-                            .scaleEffect(isHoveringCalendar ? 1.15 : 1.0)
-                            .animation(.easeInOut(duration: 0.15), value: isHoveringCalendar)
+                            .scaleEffect(isHoveringCalendar ? DesignTokens.Motion.hoverScale : 1.0)
+                            .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringCalendar)
                     }
                     .buttonStyle(.plain)
                     .onHover { isHoveringCalendar = $0 }
@@ -218,30 +226,30 @@ struct TaskItemView: View {
                     onToggleStar(task.id)
                 } label: {
                     Image(systemName: task.isStarred ? "star.fill" : "star")
-                        .font(.system(size: 12))
-                        .frame(width: 20, height: 20)
+                        .font(DesignTokens.Typography.star)
+                        .frame(width: DesignTokens.Size.trailingControl, height: DesignTokens.Size.trailingControl)
                         .contentShape(Rectangle())
                         .foregroundStyle(
                             task.isStarred
-                                ? (isHoveringStar ? .orange : .yellow)
-                                : (isHoveringStar ? .yellow : .secondary.opacity(isHovering ? 1 : 0))
+                                ? (isHoveringStar ? DesignTokens.ColorRole.warningHover : DesignTokens.ColorRole.warning)
+                                : (isHoveringStar ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText.opacity(isHovering ? 1 : 0))
                         )
-                        .scaleEffect(isHoveringStar ? 1.2 : 1.0)
-                        .animation(.easeInOut(duration: 0.15), value: isHoveringStar)
+                        .scaleEffect(isHoveringStar ? DesignTokens.Motion.starHoverScale : 1.0)
+                        .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringStar)
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringStar = $0 }
             } else if task.isStarred {
                 Image(systemName: "star.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .font(DesignTokens.Typography.star)
+                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
+        .padding(.vertical, DesignTokens.Spacing.rowVertical)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isHovering ? Color.primary.opacity(0.04) : Color.clear)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.row, style: .continuous)
+                .fill(isHovering ? DesignTokens.ColorRole.rowHover : Color.clear)
         )
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -328,7 +336,7 @@ private struct DatePickerPopover: View {
             }
         }
         .padding()
-        .frame(width: 280)
+        .frame(width: DesignTokens.Size.datePopoverWidth)
     }
 }
 
