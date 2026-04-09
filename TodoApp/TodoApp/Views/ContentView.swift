@@ -14,19 +14,17 @@ struct ContentView: View {
                 let topInset = DesignTokens.Spacing.screenTopInset
                 let bottomInset = DesignTokens.Spacing.screenVerticalInset
                 let totalHandleHeight = CGFloat(viewModel.partitions.count) * DesignTokens.Spacing.cardGap
+                let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
                 let minimumPartitionStackHeight = CGFloat(viewModel.partitions.count)
                     * DesignTokens.Size.partitionMinHeight
                     + totalHandleHeight
                 let maxTotalPartitionHeights = max(
                     0,
-                    geometry.size.height
-                        - topInset
-                        - bottomInset
+                    contentHeight
                         - DesignTokens.Size.completedMinHeight
                         - totalHandleHeight
                 )
                 let partitionStackHeight = totalPartitionHeight
-                let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
                 let completedHeight = max(
                     DesignTokens.Size.completedMinHeight,
                     contentHeight - partitionStackHeight
@@ -56,13 +54,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
-        .font(
-            viewModel.selectedFontOption.swiftUIFont(
-                size: 14,
-                role: .regular,
-                fallbackWeight: .regular
-            )
-        )
+        .font(DesignTokens.Typography.body)
         .background(
             WindowChromeController(hoverHeight: DesignTokens.Spacing.windowChromeHoverHeight)
         )

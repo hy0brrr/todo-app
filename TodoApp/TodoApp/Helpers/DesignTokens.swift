@@ -13,8 +13,10 @@ enum DesignTokens {
         static let sectionPaddingHorizontal: CGFloat = 18
         static let sectionPaddingVertical: CGFloat = 14
         static let sectionPaddingVerticalRelaxed: CGFloat = 16
-        static let cardHeaderTop: CGFloat = 14
-        static let cardHeaderBottom: CGFloat = 6
+        static let cardHeaderTop: CGFloat = 18
+        static let cardHeaderBottom: CGFloat = 8
+        static let cardHeaderRuleGap: CGFloat = 14
+        static let sectionBodyTop: CGFloat = 2
         static let screenHeaderTop: CGFloat = 8
         static let screenHeaderBottom: CGFloat = 18
         static let windowChromeHoverHeight: CGFloat = 52
@@ -25,7 +27,7 @@ enum DesignTokens {
         static let rowVertical: CGFloat = 8
         static let taskLeadingGap: CGFloat = 4
         static let checkboxTitleOverhang: CGFloat = 2
-        static let starMarkerLeadingOffset: CGFloat = -5
+        static let starMarkerLeadingOffset: CGFloat = -7
         static let dueDateTagHorizontal: CGFloat = 7
         static let dueDateTagVertical: CGFloat = 2
         static let starMarkerPreviewOpacity: Double = 0.72
@@ -37,17 +39,15 @@ enum DesignTokens {
         static let modalListRowVertical: CGFloat = 3
         static let cardHeaderGap: CGFloat = 12
         static let cardTitleGap: CGFloat = 4
-        static let titlePillHorizontal: CGFloat = 10
-        static let titlePillVertical: CGFloat = 5
-        static let fontPreviewGap: CGFloat = 12
-        static let fontPreviewBarPadding: CGFloat = 10
-        static let fontPreviewChipGap: CGFloat = 8
+        static let partitionTitleInlineGap: CGFloat = 8
+        static let partitionHeaderContentLeadingInset: CGFloat = 4
     }
 
     enum Radius {
         static let card: CGFloat = 14
         static let row: CGFloat = 8
         static let field: CGFloat = 7
+        static let checkbox: CGFloat = 4
         static let pill: CGFloat = 8
         static let titleTag: CGFloat = 6
         static let dueDateTag: CGFloat = 5
@@ -59,6 +59,7 @@ enum DesignTokens {
         static let cardLineWidth: CGFloat = 1
         static let checkboxLineWidth: CGFloat = 1.5
         static let dueDateOutlineLineWidth: CGFloat = 0.8
+        static let headerRuleLineWidth: CGFloat = 0.5
         static let cardOpacity: Double = 0.48
         static let dividerOpacity: Double = 0.10
     }
@@ -73,38 +74,61 @@ enum DesignTokens {
     }
 
     enum Typography {
-        static var previewOption: AppFontPreviewOption = .pingFang
-
-        private static func font(
+        private static func appFont(
             size: CGFloat,
             role: AppFontWeightRole,
             fallbackWeight: Font.Weight,
             design: Font.Design = .rounded
         ) -> Font {
-            previewOption.swiftUIFont(
-                size: size,
-                role: role,
-                fallbackWeight: fallbackWeight,
-                design: design
-            )
+            let fontName: String?
+
+            switch role {
+            case .regular:
+                fontName = "PingFangSC-Regular"
+            case .medium:
+                fontName = "PingFangSC-Medium"
+            case .semibold, .bold, .heavy:
+                fontName = "PingFangSC-Semibold"
+            }
+
+            if let fontName, NSFont(name: fontName, size: size) != nil {
+                return .custom(fontName, size: size)
+            }
+
+            return .system(size: size, weight: fallbackWeight, design: design)
         }
 
-        static var screenTitle: Font { font(size: 30, role: .semibold, fallbackWeight: .semibold) }
-        static var screenSubtitle: Font { font(size: 14, role: .medium, fallbackWeight: .medium) }
-        static var partitionHeader: Font { font(size: 12, role: .semibold, fallbackWeight: .semibold) }
-        static var partitionMeta: Font { font(size: 12, role: .medium, fallbackWeight: .medium) }
+        private static func titleFont(
+            size: CGFloat,
+            fallbackWeight: Font.Weight,
+            design: Font.Design = .rounded
+        ) -> Font {
+            let fontName = "PPNeueMontrealVariable-SemiBold"
+
+            if NSFont(name: fontName, size: size) != nil {
+                return .custom(fontName, size: size)
+            }
+
+            return .system(size: size, weight: fallbackWeight, design: design)
+        }
+
+        static var screenTitle: Font { appFont(size: 30, role: .semibold, fallbackWeight: .semibold) }
+        static var screenSubtitle: Font { appFont(size: 14, role: .medium, fallbackWeight: .medium) }
+        static var partitionHeader: Font { appFont(size: 12, role: .semibold, fallbackWeight: .semibold) }
+        static var partitionHeaderTitle: Font { titleFont(size: 16, fallbackWeight: .bold) }
+        static var partitionMeta: Font { appFont(size: 12, role: .medium, fallbackWeight: .medium) }
         static let partitionHeaderTracking: CGFloat = 0
-        static var body: Font { font(size: 15, role: .regular, fallbackWeight: .regular) }
-        static var modalTitle: Font { font(size: 15, role: .bold, fallbackWeight: .bold) }
-        static var bodyMedium: Font { font(size: 14, role: .medium, fallbackWeight: .medium) }
-        static var caption: Font { font(size: 13, role: .medium, fallbackWeight: .medium) }
-        static var captionStrong: Font { font(size: 13, role: .bold, fallbackWeight: .bold) }
-        static var micro: Font { font(size: 12, role: .medium, fallbackWeight: .medium) }
-        static var dueDateTag: Font { font(size: 11, role: .regular, fallbackWeight: .regular) }
-        static var icon: Font { font(size: 12, role: .semibold, fallbackWeight: .semibold) }
-        static var star: Font { font(size: 13, role: .medium, fallbackWeight: .medium) }
-        static var checkmark: Font { font(size: 8, role: .bold, fallbackWeight: .bold, design: .default) }
-        static var emoji: Font { font(size: 38, role: .regular, fallbackWeight: .regular, design: .default) }
+        static var body: Font { appFont(size: 15, role: .regular, fallbackWeight: .regular) }
+        static var modalTitle: Font { appFont(size: 15, role: .bold, fallbackWeight: .bold) }
+        static var bodyMedium: Font { appFont(size: 14, role: .medium, fallbackWeight: .medium) }
+        static var caption: Font { appFont(size: 13, role: .medium, fallbackWeight: .medium) }
+        static var captionStrong: Font { appFont(size: 13, role: .bold, fallbackWeight: .bold) }
+        static var micro: Font { appFont(size: 12, role: .medium, fallbackWeight: .medium) }
+        static var dueDateTag: Font { appFont(size: 11, role: .regular, fallbackWeight: .regular) }
+        static var icon: Font { appFont(size: 12, role: .semibold, fallbackWeight: .semibold) }
+        static var star: Font { appFont(size: 13, role: .medium, fallbackWeight: .medium) }
+        static var checkmark: Font { appFont(size: 8, role: .bold, fallbackWeight: .bold, design: .default) }
+        static var emoji: Font { appFont(size: 38, role: .regular, fallbackWeight: .regular, design: .default) }
     }
 
     enum Size {
@@ -130,9 +154,9 @@ enum DesignTokens {
         static let appMinHeight: CGFloat = 560
         static let datePopoverWidth: CGFloat = 280
         static let emojiPlate: CGFloat = 48
+        static let partitionTitleIcon: CGFloat = 12
+        static let partitionTitleIconStroke: CGFloat = 2.6
         static let topGlow: CGFloat = 280
-        static let fontPreviewBarHeight: CGFloat = 86
-        static let fontPreviewChipHeight: CGFloat = 56
     }
 
     enum Motion {
@@ -193,5 +217,6 @@ enum DesignTokens {
         static let emojiPlateBackground = Color.white.opacity(0.26)
         static let pillBackground = Color.white.opacity(0.42)
         static let stripe = Color.white.opacity(Opacity.stripe)
+        static let headerRule = Color.black.opacity(0.18)
     }
 }

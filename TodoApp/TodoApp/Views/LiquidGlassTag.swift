@@ -4,37 +4,32 @@ struct LiquidGlassTag: View {
     let text: String
 
     var body: some View {
-        Text(text)
-            .font(DesignTokens.Typography.partitionHeader)
-            .foregroundStyle(DesignTokens.ColorRole.primaryText)
-            .padding(.horizontal, DesignTokens.Spacing.titlePillHorizontal)
-            .padding(.vertical, DesignTokens.Spacing.titlePillVertical)
-            .background(tagBackground)
+        HStack(spacing: DesignTokens.Spacing.partitionTitleInlineGap) {
+            headerIcon
+
+            Text(text)
+                .font(DesignTokens.Typography.partitionHeaderTitle)
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
 
-    @ViewBuilder
-    private var tagBackground: some View {
-        let tagShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.titleTag, style: .continuous)
-
-        if #available(macOS 26.0, *) {
-            ZStack {
-                Color.clear
-                    .glassEffect(.regular, in: tagShape)
-                    .environment(\.appearsActive, true)
-
-                tagShape
-                    .fill(Color.white.opacity(0.04))
-
-                tagShape
-                    .strokeBorder(Color.white.opacity(0.52), lineWidth: 1)
+    private var headerIcon: some View {
+        ZStack {
+            ForEach([0.0, 45.0, 90.0, 135.0], id: \.self) { angle in
+                RoundedRectangle(cornerRadius: 1.2, style: .continuous)
+                    .fill(DesignTokens.ColorRole.primaryText)
+                    .frame(
+                        width: DesignTokens.Size.partitionTitleIcon,
+                        height: DesignTokens.Size.partitionTitleIconStroke
+                    )
+                    .rotationEffect(.degrees(angle))
             }
-        } else {
-            tagShape
-                .fill(DesignTokens.ColorRole.pillBackground)
-                .overlay(
-                    tagShape
-                        .strokeBorder(Color.white.opacity(0.32), lineWidth: 1)
-                )
         }
+        .frame(
+            width: DesignTokens.Size.partitionTitleIcon,
+            height: DesignTokens.Size.partitionTitleIcon
+        )
     }
 }

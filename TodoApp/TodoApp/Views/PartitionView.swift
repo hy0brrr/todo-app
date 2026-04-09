@@ -16,23 +16,18 @@ struct PartitionView: View {
     @State private var isHoveringHeader = false
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            if !isEditing {
-                decorativeEmoji
+        VStack(spacing: 0) {
+            // Header
+            if isEditing {
+                PartitionEditView(partition: partition, onSave: onSaveEdit)
+                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+            } else {
+                partitionHeader
             }
 
-            VStack(spacing: 0) {
-                // Header
-                if isEditing {
-                    PartitionEditView(partition: partition, onSave: onSaveEdit)
-                } else {
-                    partitionHeader
-                }
-
-                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
-
-                // Task list
-                ScrollView {
+            // Task list
+            ScrollView {
+                VStack(spacing: 0) {
                     LazyVStack(spacing: 0) {
                         ForEach(tasks) { task in
                             TaskItemView(
@@ -54,12 +49,14 @@ struct PartitionView: View {
                             .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
                     }
                 }
-
-                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
-
-                // Add task input
-                addTaskBar
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .padding(.top, DesignTokens.Spacing.sectionBodyTop)
             }
+
+            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+
+            // Add task input
+            addTaskBar
         }
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
@@ -78,10 +75,15 @@ struct PartitionView: View {
     }
 
     private var partitionHeader: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
-            partitionTitleTag
+        VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
+                partitionTitleTag
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
+
+            headerRule
         }
         .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
         .padding(.top, DesignTokens.Spacing.cardHeaderTop)
@@ -102,13 +104,10 @@ struct PartitionView: View {
         .animation(.easeOut(duration: DesignTokens.Motion.quick), value: isHoveringHeader)
     }
 
-    private var decorativeEmoji: some View {
-        Text(partition.color.emoji)
-            .font(DesignTokens.Typography.emoji)
-            .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
-            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-            .padding(.trailing, DesignTokens.Spacing.sectionPaddingHorizontal)
-            .allowsHitTesting(false)
+    private var headerRule: some View {
+        Rectangle()
+            .fill(DesignTokens.ColorRole.headerRule)
+            .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
     }
 
     private var partitionTitleTag: some View {
@@ -199,7 +198,7 @@ struct PartitionView: View {
 
 #Preview {
     PartitionView(
-        partition: Partition(name: "工作", color: .blue),
+        partition: Partition(name: "Work", color: .blue),
         tasks: [
             TodoTask(partitionId: "p1", name: "整理第二季度产品需求", isStarred: true),
             TodoTask(partitionId: "p1", name: "更新路线图", dueDate: Date()),

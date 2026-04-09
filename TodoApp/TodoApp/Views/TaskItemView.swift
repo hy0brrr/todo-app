@@ -207,7 +207,7 @@ struct TaskItemView: View {
             onToggleComplete(task.id)
         } label: {
             ZStack {
-                Circle()
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
                     .strokeBorder(
                         task.isCompleted
                             ? DesignTokens.ColorRole.successMuted
@@ -216,7 +216,7 @@ struct TaskItemView: View {
                     )
                     .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
                     .background(
-                        Circle()
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
                             .fill(task.isCompleted ? DesignTokens.ColorRole.successMuted : Color.clear)
                     )
                 if task.isCompleted {
@@ -335,10 +335,9 @@ struct TaskItemView: View {
     private var checkboxAlignedLeadingInset: CGFloat {
         let checkboxVisualInset = (DesignTokens.Size.checkboxTapTarget - DesignTokens.Size.checkbox) / 2
         return DesignTokens.Spacing.sectionPaddingHorizontal
-            + DesignTokens.Spacing.titlePillHorizontal
+            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
             - DesignTokens.Spacing.rowHorizontal
             - checkboxVisualInset
-            - DesignTokens.Spacing.checkboxTitleOverhang
     }
 
     private func commitRename() {

@@ -5,24 +5,25 @@ struct CompletedSectionView: View {
     let onToggleComplete: (String) -> Void
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            decorativeEmoji
-
-            VStack(spacing: 0) {
-                // Header
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
                 HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
                     LiquidGlassTag(text: "Completed")
 
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-                .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-                .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
+                .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
 
-                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+                headerRule
+            }
+            .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+            .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
 
-                // Completed tasks list
-                ScrollView {
+            // Completed tasks list
+            ScrollView {
+                VStack(spacing: 0) {
                     LazyVStack(spacing: 0) {
                         ForEach(tasks) { task in
                             TaskItemView(
@@ -44,6 +45,8 @@ struct CompletedSectionView: View {
                             .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .padding(.top, DesignTokens.Spacing.sectionBodyTop)
             }
         }
         .background(cardBackground)
@@ -59,15 +62,6 @@ struct CompletedSectionView: View {
             radius: DesignTokens.Shadow.cardRadius,
             y: DesignTokens.Shadow.cardYOffset
         )
-    }
-
-    private var decorativeEmoji: some View {
-        Text("☁️")
-            .font(DesignTokens.Typography.emoji)
-            .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
-            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-            .padding(.trailing, DesignTokens.Spacing.sectionPaddingHorizontal)
-            .allowsHitTesting(false)
     }
 
     private var cardBackground: some View {
@@ -103,6 +97,12 @@ struct CompletedSectionView: View {
                 }
             }
         }
+    }
+
+    private var headerRule: some View {
+        Rectangle()
+            .fill(DesignTokens.ColorRole.headerRule)
+            .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
     }
 }
 

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AppKit
+import CoreText
 
 enum AppFontWeightRole {
     case regular
@@ -10,115 +11,27 @@ enum AppFontWeightRole {
     case heavy
 }
 
-enum AppFontPreviewOption: String, CaseIterable, Identifiable {
-    case pingFang
-    case sourceHanSans
-    case sourceHanSerif
-    case founderLantinghei
-    case founderYouhei
+enum TitleFontRegistrar {
+    private static var hasRegistered = false
 
-    var id: String { rawValue }
+    private static let localPreviewFontFiles = [
+        "neue-montreal.ttf",
+    ]
 
-    var displayName: String {
-        switch self {
-        case .pingFang:
-            return "苹方"
-        case .sourceHanSans:
-            return "思源黑体"
-        case .sourceHanSerif:
-            return "思源宋体"
-        case .founderLantinghei:
-            return "方正兰亭黑"
-        case .founderYouhei:
-            return "方正悠黑"
+    static func registerLocalPreviewFonts() {
+        guard !hasRegistered else { return }
+        hasRegistered = true
+
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Fonts/TitlePreview", isDirectory: true)
+
+        for fileName in localPreviewFontFiles {
+            let url = directory.appendingPathComponent(fileName)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+
+            var error: Unmanaged<CFError>?
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
         }
-    }
-
-    var sampleText: String {
-        switch self {
-        case .pingFang:
-            return "清爽原生"
-        case .sourceHanSans:
-            return "现代中性"
-        case .sourceHanSerif:
-            return "书卷层次"
-        case .founderLantinghei:
-            return "锋利克制"
-        case .founderYouhei:
-            return "尚未安装"
-        }
-    }
-
-    var availabilityText: String {
-        isInstalled ? "已安装" : "未安装"
-    }
-
-    var isInstalled: Bool {
-        fontName(for: .regular).map { NSFont(name: $0, size: 16) != nil } ?? false
-    }
-
-    func fontName(for role: AppFontWeightRole) -> String? {
-        switch self {
-        case .pingFang:
-            switch role {
-            case .regular:
-                return "PingFangSC-Regular"
-            case .medium:
-                return "PingFangSC-Medium"
-            case .semibold, .bold, .heavy:
-                return "PingFangSC-Semibold"
-            }
-        case .sourceHanSans:
-            switch role {
-            case .regular:
-                return "SourceHanSansCN-Regular"
-            case .medium, .semibold:
-                return "SourceHanSansCN-Medium"
-            case .bold:
-                return "SourceHanSansCN-Bold"
-            case .heavy:
-                return "SourceHanSansCN-Heavy"
-            }
-        case .sourceHanSerif:
-            switch role {
-            case .regular:
-                return "SourceHanSerifSC-Regular"
-            case .medium:
-                return "SourceHanSerifSC-Medium"
-            case .semibold:
-                return "SourceHanSerifSC-SemiBold"
-            case .bold:
-                return "SourceHanSerifSC-Bold"
-            case .heavy:
-                return "SourceHanSerifSC-Heavy"
-            }
-        case .founderLantinghei:
-            switch role {
-            case .regular:
-                return "FZLTXHK--GBK1-0"
-            case .medium, .semibold, .bold:
-                return "FZLTZHK--GBK1-0"
-            case .heavy:
-                return "FZLTTHK--GBK1-0"
-            }
-        case .founderYouhei:
-            switch role {
-            case .regular:
-                return "FZYouHeiS-R-GB"
-            case .medium, .semibold:
-                return "FZYouHei-M08S"
-            case .bold, .heavy:
-                return "FZYouHei-M08S"
-            }
-        }
-    }
-
-    func swiftUIFont(size: CGFloat, role: AppFontWeightRole, fallbackWeight: Font.Weight, design: Font.Design = .rounded) -> Font {
-        if let fontName = fontName(for: role), NSFont(name: fontName, size: size) != nil {
-            return .custom(fontName, size: size)
-        }
-
-        return .system(size: size, weight: fallbackWeight, design: design)
     }
 }
 
@@ -129,18 +42,14 @@ class TodoViewModel {
     var editingPartitionId: String? = nil
     var showManagePartitions: Bool = false
     var sidebarWidth: CGFloat = 320
-    var selectedFontOption: AppFontPreviewOption = .pingFang {
-        didSet {
-            DesignTokens.Typography.previewOption = selectedFontOption
-        }
-    }
 
     init() {
+        TitleFontRegistrar.registerLocalPreviewFonts()
         let today = Calendar.current.startOfDay(for: Date())
 
         self.partitions = [
-            Partition(id: "p1", name: "工作", color: .blue, height: 200),
-            Partition(id: "p2", name: "生活", color: .green, height: 200),
+            Partition(id: "p1", name: "Work", color: .blue, height: 200),
+            Partition(id: "p2", name: "Life", color: .green, height: 200),
         ]
 
         self.tasks = [
@@ -152,8 +61,6 @@ class TodoViewModel {
             TodoTask(id: "t6", partitionId: "p1", name: "写周报", isCompleted: true, isStarred: false, dueDate: nil, createdAt: Date().addingTimeInterval(-20), completedAt: Date().addingTimeInterval(-1)),
             TodoTask(id: "t7", partitionId: "p2", name: "预订机票", isCompleted: true, isStarred: false, dueDate: nil, createdAt: Date().addingTimeInterval(-25), completedAt: Date().addingTimeInterval(-0.5)),
         ]
-
-        DesignTokens.Typography.previewOption = selectedFontOption
     }
 
     // MARK: - Computed Properties
