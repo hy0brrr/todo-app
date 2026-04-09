@@ -35,8 +35,8 @@ struct ManagePartitionsView: View {
                 ForEach(partitions) { partition in
                     HStack(spacing: 10) {
                         Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+                            .font(DesignTokens.Typography.micro)
+                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
 
                         Circle()
                             .fill(partition.color.color)

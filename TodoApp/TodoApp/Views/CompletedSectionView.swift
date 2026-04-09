@@ -5,60 +5,44 @@ struct CompletedSectionView: View {
     let onToggleComplete: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardTitleGap) {
-                    Text("Completed")
-                        .font(DesignTokens.Typography.partitionHeader)
-                        .foregroundStyle(DesignTokens.ColorRole.primaryText)
+        ZStack(alignment: .topTrailing) {
+            decorativeEmoji
 
-                    Text("\(tasks.count) archived")
-                        .font(DesignTokens.Typography.partitionMeta)
-                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                        .padding(.horizontal, DesignTokens.Spacing.titlePillHorizontal)
-                        .padding(.vertical, DesignTokens.Spacing.titlePillVertical)
-                        .background(
-                            Capsule()
-                                .fill(DesignTokens.ColorRole.pillBackground)
-                        )
+            VStack(spacing: 0) {
+                // Header
+                HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
+                    LiquidGlassTag(text: "Completed")
+
+                    Spacer(minLength: 0)
                 }
-                Spacer()
+                .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
+                .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+                .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
 
-                Text("☁️")
-                    .font(DesignTokens.Typography.emoji)
-                    .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.emojiPlate, style: .continuous)
-                            .fill(DesignTokens.ColorRole.emojiPlateBackground)
-                    )
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-            .padding(.vertical, DesignTokens.Spacing.sectionPaddingVerticalRelaxed)
+                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
-            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
-
-            // Completed tasks list
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(tasks) { task in
-                        TaskItemView(
-                            task: task,
-                            onToggleComplete: onToggleComplete,
-                            onToggleStar: { _ in },
-                            onSetDueDate: { _, _ in },
-                            onRename: { _, _ in }
-                        )
+                // Completed tasks list
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(tasks) { task in
+                            TaskItemView(
+                                task: task,
+                                onToggleComplete: onToggleComplete,
+                                onToggleStar: { _ in },
+                                onSetDueDate: { _, _ in },
+                                onRename: { _, _ in }
+                            )
+                        }
                     }
-                }
 
-                if tasks.isEmpty {
-                    Text("No completed tasks.")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                        .italic()
-                        .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
-                        .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
+                    if tasks.isEmpty {
+                        Text("No completed tasks.")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                            .italic()
+                            .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
+                            .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
+                    }
                 }
             }
         }
@@ -75,6 +59,15 @@ struct CompletedSectionView: View {
             radius: DesignTokens.Shadow.cardRadius,
             y: DesignTokens.Shadow.cardYOffset
         )
+    }
+
+    private var decorativeEmoji: some View {
+        Text("☁️")
+            .font(DesignTokens.Typography.emoji)
+            .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
+            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+            .padding(.trailing, DesignTokens.Spacing.sectionPaddingHorizontal)
+            .allowsHitTesting(false)
     }
 
     private var cardBackground: some View {
@@ -118,8 +111,8 @@ struct CompletedSectionView: View {
 #Preview {
     CompletedSectionView(
         tasks: [
-            TodoTask(partitionId: "p1", name: "Write weekly report", isCompleted: true, completedAt: Date()),
-            TodoTask(partitionId: "p2", name: "Book flight tickets", isCompleted: true, completedAt: Date()),
+            TodoTask(partitionId: "p1", name: "写周报", isCompleted: true, completedAt: Date()),
+            TodoTask(partitionId: "p2", name: "预订机票", isCompleted: true, completedAt: Date()),
         ],
         onToggleComplete: { _ in }
     )

@@ -61,43 +61,13 @@ struct TaskItemView: View {
     @State private var isHoveringCheckbox = false
     @State private var isHoveringStar = false
     @State private var isHoveringCalendar = false
-    @State private var isHoveringDueDate = false
 
     @FocusState private var isNameFieldFocused: Bool
     @State private var clickHandler = ClickOutsideHandler()
 
     var body: some View {
-        HStack(spacing: 9) {
-            // Completion checkbox
-            Button {
-                onToggleComplete(task.id)
-            } label: {
-                ZStack {
-                    Circle()
-                        .strokeBorder(
-                            task.isCompleted
-                                ? DesignTokens.ColorRole.successMuted
-                                : (isHoveringCheckbox ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText),
-                            lineWidth: DesignTokens.Stroke.checkboxLineWidth
-                        )
-                        .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
-                        .background(
-                            Circle()
-                                .fill(task.isCompleted ? DesignTokens.ColorRole.successMuted : Color.clear)
-                        )
-                    if task.isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(DesignTokens.Typography.checkmark)
-                            .foregroundStyle(.white)
-                    }
-                }
-                .frame(width: DesignTokens.Size.checkboxTapTarget, height: DesignTokens.Size.checkboxTapTarget)
-                .contentShape(Rectangle())
-                .scaleEffect(isHoveringCheckbox ? DesignTokens.Motion.hoverScale : 1.0)
-                .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringCheckbox)
-            }
-            .buttonStyle(.plain)
-            .onHover { isHoveringCheckbox = $0 }
+        HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
+            leadingControls
 
             // Task name — double-click to edit, click outside to save
             if isEditing {
@@ -146,48 +116,28 @@ struct TaskItemView: View {
             if !task.isCompleted {
                 // --- Due date area ---
                 if let dueDate = task.dueDate {
-                    // Task HAS a due date
-                    if isHovering || showDatePicker {
-                        Button {
-                            showDatePicker.toggle()
-                        } label: {
-                            Text(DateHelpers.formatDueDate(dueDate))
-                                .font(DesignTokens.Typography.micro)
-                                .foregroundStyle(DesignTokens.ColorRole.primaryText)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(
-                                    Capsule()
-                                        .fill(DesignTokens.ColorRole.pillBackground)
-                                )
-                                .scaleEffect(isHoveringDueDate ? DesignTokens.Motion.dueDateHoverScale : 1.0)
-                                .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringDueDate)
-                        }
-                        .buttonStyle(.plain)
-                        .onHover { isHoveringDueDate = $0 }
-                        .popover(isPresented: $showDatePicker) {
-                            DatePickerPopover(
-                                currentDate: task.dueDate,
-                                hasExistingDate: true,
-                                onSelect: { date in
-                                    onSetDueDate(task.id, date)
-                                    showDatePicker = false
-                                },
-                                onRemove: {
-                                    onSetDueDate(task.id, nil)
-                                    showDatePicker = false
-                                },
-                                onCancel: {
-                                    showDatePicker = false
-                                }
-                            )
-                        }
-                    } else {
-                        Text(DateHelpers.formatDueDate(dueDate))
-                            .font(DesignTokens.Typography.micro)
-                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                            .fontWeight(DateHelpers.isOverdue(dueDate) ? .medium : .regular)
+                    Button {
+                        showDatePicker.toggle()
+                    } label: {
+                        dueDateLabel(dueDate)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showDatePicker) {
+                        DatePickerPopover(
+                            currentDate: task.dueDate,
+                            hasExistingDate: true,
+                            onSelect: { date in
+                                onSetDueDate(task.id, date)
+                                showDatePicker = false
+                            },
+                            onRemove: {
+                                onSetDueDate(task.id, nil)
+                                showDatePicker = false
+                            },
+                            onCancel: {
+                                showDatePicker = false
+                            }
+                        )
                     }
                 } else {
                     // Task has NO due date — calendar icon with hover effect
@@ -199,8 +149,6 @@ struct TaskItemView: View {
                             .foregroundStyle(isHoveringCalendar ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText)
                             .frame(width: DesignTokens.Size.trailingControl, height: DesignTokens.Size.trailingControl)
                             .contentShape(Rectangle())
-                            .scaleEffect(isHoveringCalendar ? DesignTokens.Motion.hoverScale : 1.0)
-                            .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringCalendar)
                     }
                     .buttonStyle(.plain)
                     .onHover { isHoveringCalendar = $0 }
@@ -220,29 +168,6 @@ struct TaskItemView: View {
                         )
                     }
                 }
-
-                // Star button with hover effect
-                Button {
-                    onToggleStar(task.id)
-                } label: {
-                    Image(systemName: task.isStarred ? "star.fill" : "star")
-                        .font(DesignTokens.Typography.star)
-                        .frame(width: DesignTokens.Size.trailingControl, height: DesignTokens.Size.trailingControl)
-                        .contentShape(Rectangle())
-                        .foregroundStyle(
-                            task.isStarred
-                                ? (isHoveringStar ? DesignTokens.ColorRole.warningHover : DesignTokens.ColorRole.warning)
-                                : (isHoveringStar ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText.opacity(isHovering ? 1 : 0))
-                        )
-                        .scaleEffect(isHoveringStar ? DesignTokens.Motion.starHoverScale : 1.0)
-                        .animation(.easeInOut(duration: DesignTokens.Motion.quick), value: isHoveringStar)
-                }
-                .buttonStyle(.plain)
-                .onHover { isHoveringStar = $0 }
-            } else if task.isStarred {
-                Image(systemName: "star.fill")
-                    .font(DesignTokens.Typography.star)
-                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
@@ -259,6 +184,161 @@ struct TaskItemView: View {
                 isHovering = hovering
             }
         }
+    }
+
+    private var leadingControls: some View {
+        ZStack(alignment: .leading) {
+            starMarkerButton
+            checkboxButton
+                .padding(.leading, checkboxAlignedLeadingInset)
+        }
+        .frame(
+            width: max(
+                checkboxAlignedLeadingInset + DesignTokens.Size.checkboxTapTarget,
+                DesignTokens.Size.starMarkerTapTargetWidth
+            ),
+            height: DesignTokens.Size.checkboxTapTarget,
+            alignment: .leading
+        )
+    }
+
+    private var checkboxButton: some View {
+        Button {
+            onToggleComplete(task.id)
+        } label: {
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        task.isCompleted
+                            ? DesignTokens.ColorRole.successMuted
+                            : (isHoveringCheckbox ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText),
+                        lineWidth: DesignTokens.Stroke.checkboxLineWidth
+                    )
+                    .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
+                    .background(
+                        Circle()
+                            .fill(task.isCompleted ? DesignTokens.ColorRole.successMuted : Color.clear)
+                    )
+                if task.isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(DesignTokens.Typography.checkmark)
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(width: DesignTokens.Size.checkboxTapTarget, height: DesignTokens.Size.checkboxTapTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringCheckbox = $0 }
+    }
+
+    private var starMarkerButton: some View {
+        Button {
+            onToggleStar(task.id)
+        } label: {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.starMarker, style: .continuous)
+                .fill(starMarkerColor)
+                .frame(
+                    width: DesignTokens.Size.starMarkerWidth,
+                    height: DesignTokens.Size.starMarkerHeight
+                )
+                .rotationEffect(.degrees(14))
+                .frame(
+                    width: DesignTokens.Size.starMarkerTapTargetWidth,
+                    height: DesignTokens.Size.checkboxTapTarget
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringStar = $0 }
+        .offset(x: DesignTokens.Spacing.starMarkerLeadingOffset)
+        .allowsHitTesting(task.isStarred || isHovering || isHoveringStar)
+        .accessibilityLabel(task.isStarred ? "Remove star" : "Mark as starred")
+    }
+
+    @ViewBuilder
+    private func dueDateLabel(_ dueDate: Date) -> some View {
+        let daysFromToday = DateHelpers.daysFromToday(dueDate) ?? .max
+
+        Group {
+            switch daysFromToday {
+            case ..<0:
+                dueDateTag(
+                    text: DateHelpers.formatDueDate(dueDate),
+                    background: DesignTokens.ColorRole.dueDateUrgentTag
+                )
+            case 0:
+                dueDateTag(
+                    text: DateHelpers.formatDueDate(dueDate),
+                    background: DesignTokens.ColorRole.dueDateUrgentTag
+                )
+            case 1:
+                outlinedDueDateTag(
+                    text: DateHelpers.formatDueDate(dueDate)
+                )
+            case 2:
+                outlinedDueDateTag(
+                    text: DateHelpers.formatDueDate(dueDate)
+                )
+            default:
+                Text(DateHelpers.formatDueDate(dueDate))
+                    .font(DesignTokens.Typography.dueDateTag)
+                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                    .padding(.trailing, DesignTokens.Spacing.dueDateTagHorizontal)
+            }
+        }
+        .frame(minWidth: DesignTokens.Size.dueDateColumnMinWidth, alignment: .trailing)
+    }
+
+    private func dueDateTag(text: String, background: Color) -> some View {
+        Text(text)
+            .font(DesignTokens.Typography.dueDateTag)
+            .foregroundStyle(DesignTokens.ColorRole.dueDateNeutralText)
+            .padding(.horizontal, DesignTokens.Spacing.dueDateTagHorizontal)
+            .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
+                    .fill(background)
+            )
+    }
+
+    private func outlinedDueDateTag(text: String) -> some View {
+        let color = DesignTokens.ColorRole.secondaryText
+
+        return Text(text)
+            .font(DesignTokens.Typography.dueDateTag)
+            .foregroundStyle(color)
+            .padding(.horizontal, DesignTokens.Spacing.dueDateTagHorizontal)
+            .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
+                    .strokeBorder(color, lineWidth: DesignTokens.Stroke.dueDateOutlineLineWidth)
+            )
+    }
+
+    private var starMarkerColor: Color {
+        if task.isStarred {
+            return DesignTokens.ColorRole.dueDateUrgentTag
+        }
+
+        if isHoveringStar {
+            return .white
+        }
+
+        if isHovering {
+            return Color.white.opacity(DesignTokens.Spacing.starMarkerPreviewOpacity)
+        }
+
+        return .clear
+    }
+
+    private var checkboxAlignedLeadingInset: CGFloat {
+        let checkboxVisualInset = (DesignTokens.Size.checkboxTapTarget - DesignTokens.Size.checkbox) / 2
+        return DesignTokens.Spacing.sectionPaddingHorizontal
+            + DesignTokens.Spacing.titlePillHorizontal
+            - DesignTokens.Spacing.rowHorizontal
+            - checkboxVisualInset
+            - DesignTokens.Spacing.checkboxTitleOverhang
     }
 
     private func commitRename() {
@@ -345,21 +425,21 @@ private struct DatePickerPopover: View {
 #Preview {
     VStack(spacing: 0) {
         TaskItemView(
-            task: TodoTask(partitionId: "p1", name: "Task with due date", isStarred: true, dueDate: Date()),
+            task: TodoTask(partitionId: "p1", name: "今晚提交首页视觉稿", isStarred: true, dueDate: Date()),
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
             onSetDueDate: { _, _ in },
             onRename: { _, _ in }
         )
         TaskItemView(
-            task: TodoTask(partitionId: "p1", name: "Task without due date"),
+            task: TodoTask(partitionId: "p1", name: "整理会议记录"),
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
             onSetDueDate: { _, _ in },
             onRename: { _, _ in }
         )
         TaskItemView(
-            task: TodoTask(partitionId: "p1", name: "Completed task", isCompleted: true),
+            task: TodoTask(partitionId: "p1", name: "发送周报", isCompleted: true),
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
             onSetDueDate: { _, _ in },

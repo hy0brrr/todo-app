@@ -20,6 +20,7 @@
 		A100000B /* DateHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B /* DateHelpers.swift */; };
 		A100000C /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* DesignTokens.swift */; };
 		A100000D /* WindowChromeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* WindowChromeController.swift */; };
+		A100000E /* LiquidGlassTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000E /* LiquidGlassTag.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		B100000B /* DateHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateHelpers.swift; sourceTree = "<group>"; };
 		B100000C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		B100000D /* WindowChromeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowChromeController.swift; sourceTree = "<group>"; };
+		B100000E /* LiquidGlassTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassTag.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +98,7 @@
 				B1000008 /* PartitionEditView.swift */,
 				B1000009 /* CompletedSectionView.swift */,
 				B100000A /* ManagePartitionsView.swift */,
+				B100000E /* LiquidGlassTag.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -183,6 +186,7 @@
 				A100000B /* DateHelpers.swift in Sources */,
 				A100000C /* DesignTokens.swift in Sources */,
 				A100000D /* WindowChromeController.swift in Sources */,
+				A100000E /* LiquidGlassTag.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

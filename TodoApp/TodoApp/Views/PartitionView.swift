@@ -16,44 +16,50 @@ struct PartitionView: View {
     @State private var isHoveringHeader = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            if isEditing {
-                PartitionEditView(partition: partition, onSave: onSaveEdit)
-            } else {
-                partitionHeader
+        ZStack(alignment: .topTrailing) {
+            if !isEditing {
+                decorativeEmoji
             }
 
-            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+            VStack(spacing: 0) {
+                // Header
+                if isEditing {
+                    PartitionEditView(partition: partition, onSave: onSaveEdit)
+                } else {
+                    partitionHeader
+                }
 
-            // Task list
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(tasks) { task in
-                        TaskItemView(
-                            task: task,
-                            onToggleComplete: onToggleComplete,
-                            onToggleStar: onToggleStar,
-                            onSetDueDate: onSetDueDate,
-                            onRename: onRename
-                        )
+                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+
+                // Task list
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(tasks) { task in
+                            TaskItemView(
+                                task: task,
+                                onToggleComplete: onToggleComplete,
+                                onToggleStar: onToggleStar,
+                                onSetDueDate: onSetDueDate,
+                                onRename: onRename
+                            )
+                        }
+                    }
+
+                    if tasks.isEmpty {
+                        Text("No tasks yet.")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                            .italic()
+                            .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
+                            .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
                     }
                 }
 
-                if tasks.isEmpty {
-                    Text("No tasks yet.")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                        .italic()
-                        .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
-                        .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
-                }
+                Divider().opacity(DesignTokens.Stroke.dividerOpacity)
+
+                // Add task input
+                addTaskBar
             }
-
-            Divider().opacity(DesignTokens.Stroke.dividerOpacity)
-
-            // Add task input
-            addTaskBar
         }
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
@@ -68,59 +74,62 @@ struct PartitionView: View {
             radius: DesignTokens.Shadow.cardRadius,
             y: DesignTokens.Shadow.cardYOffset
         )
+        .zIndex(isHoveringHeader ? 10 : 0)
     }
 
     private var partitionHeader: some View {
-        HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardTitleGap) {
-                Text(partition.name.isEmpty ? "Untitled" : partition.name)
-                    .font(DesignTokens.Typography.partitionHeader)
-                    .foregroundStyle(DesignTokens.ColorRole.primaryText)
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
+            partitionTitleTag
 
-                Text("\(tasks.count) items")
-                    .font(DesignTokens.Typography.partitionMeta)
-                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                    .padding(.horizontal, DesignTokens.Spacing.titlePillHorizontal)
-                    .padding(.vertical, DesignTokens.Spacing.titlePillVertical)
-                    .background(
-                        Capsule()
-                            .fill(DesignTokens.ColorRole.pillBackground)
-                    )
-            }
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 8) {
-                Text(partition.color.emoji)
-                    .font(DesignTokens.Typography.emoji)
-                    .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.emojiPlate, style: .continuous)
-                            .fill(DesignTokens.ColorRole.emojiPlateBackground)
-                    )
-
-                if isHoveringHeader {
-                    Button {
-                        onStartEdit()
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(DesignTokens.Typography.icon)
-                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(DesignTokens.ColorRole.pillBackground)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-        .padding(.vertical, DesignTokens.Spacing.sectionPaddingVerticalRelaxed)
+        .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+        .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
+        .overlay(alignment: .topTrailing) {
+            headerSettingsButton
+                .padding(.top, DesignTokens.Spacing.cardHeaderTop - 2)
+                .padding(.trailing, DesignTokens.Spacing.sectionPaddingHorizontal)
+                .opacity(isHoveringHeader ? 1 : 0)
+                .scaleEffect(isHoveringHeader ? 1 : 0.94, anchor: .topTrailing)
+                .allowsHitTesting(isHoveringHeader)
+                .zIndex(20)
+        }
+        .contentShape(Rectangle())
         .onHover { hovering in
             isHoveringHeader = hovering
         }
+        .animation(.easeOut(duration: DesignTokens.Motion.quick), value: isHoveringHeader)
+    }
+
+    private var decorativeEmoji: some View {
+        Text(partition.color.emoji)
+            .font(DesignTokens.Typography.emoji)
+            .frame(width: DesignTokens.Size.emojiPlate, height: DesignTokens.Size.emojiPlate)
+            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+            .padding(.trailing, DesignTokens.Spacing.sectionPaddingHorizontal)
+            .allowsHitTesting(false)
+    }
+
+    private var partitionTitleTag: some View {
+        LiquidGlassTag(text: partition.name.isEmpty ? "Untitled" : partition.name)
+    }
+
+    private var headerSettingsButton: some View {
+        Button {
+            onStartEdit()
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(DesignTokens.Typography.icon)
+                .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.pill, style: .continuous)
+                        .fill(DesignTokens.ColorRole.pillBackground)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var addTaskBar: some View {
@@ -190,10 +199,10 @@ struct PartitionView: View {
 
 #Preview {
     PartitionView(
-        partition: Partition(name: "Work", color: .blue),
+        partition: Partition(name: "工作", color: .blue),
         tasks: [
-            TodoTask(partitionId: "p1", name: "Q3 Product PRD", isStarred: true),
-            TodoTask(partitionId: "p1", name: "Update roadmap", dueDate: Date()),
+            TodoTask(partitionId: "p1", name: "整理第二季度产品需求", isStarred: true),
+            TodoTask(partitionId: "p1", name: "更新路线图", dueDate: Date()),
         ],
         isEditing: false,
         onAddTask: { _, _ in },

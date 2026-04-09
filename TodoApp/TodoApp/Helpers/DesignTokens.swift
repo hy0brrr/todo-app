@@ -13,6 +13,8 @@ enum DesignTokens {
         static let sectionPaddingHorizontal: CGFloat = 18
         static let sectionPaddingVertical: CGFloat = 14
         static let sectionPaddingVerticalRelaxed: CGFloat = 16
+        static let cardHeaderTop: CGFloat = 14
+        static let cardHeaderBottom: CGFloat = 6
         static let screenHeaderTop: CGFloat = 8
         static let screenHeaderBottom: CGFloat = 18
         static let windowChromeHoverHeight: CGFloat = 52
@@ -21,6 +23,12 @@ enum DesignTokens {
         static let listEmptyVertical: CGFloat = 14
         static let rowHorizontal: CGFloat = 12
         static let rowVertical: CGFloat = 8
+        static let taskLeadingGap: CGFloat = 4
+        static let checkboxTitleOverhang: CGFloat = 2
+        static let starMarkerLeadingOffset: CGFloat = -5
+        static let dueDateTagHorizontal: CGFloat = 7
+        static let dueDateTagVertical: CGFloat = 2
+        static let starMarkerPreviewOpacity: Double = 0.72
         static let inputHorizontal: CGFloat = 8
         static let inputVertical: CGFloat = 6
         static let modalHorizontal: CGFloat = 16
@@ -31,19 +39,26 @@ enum DesignTokens {
         static let cardTitleGap: CGFloat = 4
         static let titlePillHorizontal: CGFloat = 10
         static let titlePillVertical: CGFloat = 5
+        static let fontPreviewGap: CGFloat = 12
+        static let fontPreviewBarPadding: CGFloat = 10
+        static let fontPreviewChipGap: CGFloat = 8
     }
 
     enum Radius {
-        static let card: CGFloat = 28
-        static let row: CGFloat = 16
-        static let field: CGFloat = 14
-        static let pill: CGFloat = 999
-        static let emojiPlate: CGFloat = 24
+        static let card: CGFloat = 14
+        static let row: CGFloat = 8
+        static let field: CGFloat = 7
+        static let pill: CGFloat = 8
+        static let titleTag: CGFloat = 6
+        static let dueDateTag: CGFloat = 5
+        static let starMarker: CGFloat = 2
+        static let emojiPlate: CGFloat = 12
     }
 
     enum Stroke {
         static let cardLineWidth: CGFloat = 1
         static let checkboxLineWidth: CGFloat = 1.5
+        static let dueDateOutlineLineWidth: CGFloat = 0.8
         static let cardOpacity: Double = 0.48
         static let dividerOpacity: Double = 0.10
     }
@@ -58,28 +73,49 @@ enum DesignTokens {
     }
 
     enum Typography {
-        static let screenTitle = Font.system(size: 30, weight: .semibold, design: .rounded)
-        static let screenSubtitle = Font.system(size: 14, weight: .medium, design: .rounded)
-        static let partitionHeader = Font.system(size: 26, weight: .semibold, design: .rounded)
-        static let partitionMeta = Font.system(size: 12, weight: .medium, design: .rounded)
+        static var previewOption: AppFontPreviewOption = .pingFang
+
+        private static func font(
+            size: CGFloat,
+            role: AppFontWeightRole,
+            fallbackWeight: Font.Weight,
+            design: Font.Design = .rounded
+        ) -> Font {
+            previewOption.swiftUIFont(
+                size: size,
+                role: role,
+                fallbackWeight: fallbackWeight,
+                design: design
+            )
+        }
+
+        static var screenTitle: Font { font(size: 30, role: .semibold, fallbackWeight: .semibold) }
+        static var screenSubtitle: Font { font(size: 14, role: .medium, fallbackWeight: .medium) }
+        static var partitionHeader: Font { font(size: 12, role: .semibold, fallbackWeight: .semibold) }
+        static var partitionMeta: Font { font(size: 12, role: .medium, fallbackWeight: .medium) }
         static let partitionHeaderTracking: CGFloat = 0
-        static let body = Font.system(size: 15, weight: .medium, design: .rounded)
-        static let modalTitle = Font.system(size: 15, weight: .bold, design: .rounded)
-        static let bodyMedium = Font.system(size: 14, weight: .medium, design: .rounded)
-        static let caption = Font.system(size: 13, weight: .medium, design: .rounded)
-        static let captionStrong = Font.system(size: 13, weight: .bold, design: .rounded)
-        static let micro = Font.system(size: 12, weight: .medium, design: .rounded)
-        static let icon = Font.system(size: 12, weight: .semibold, design: .rounded)
-        static let star = Font.system(size: 13, weight: .medium, design: .rounded)
-        static let checkmark = Font.system(size: 8, weight: .bold)
-        static let emoji = Font.system(size: 38)
+        static var body: Font { font(size: 15, role: .regular, fallbackWeight: .regular) }
+        static var modalTitle: Font { font(size: 15, role: .bold, fallbackWeight: .bold) }
+        static var bodyMedium: Font { font(size: 14, role: .medium, fallbackWeight: .medium) }
+        static var caption: Font { font(size: 13, role: .medium, fallbackWeight: .medium) }
+        static var captionStrong: Font { font(size: 13, role: .bold, fallbackWeight: .bold) }
+        static var micro: Font { font(size: 12, role: .medium, fallbackWeight: .medium) }
+        static var dueDateTag: Font { font(size: 11, role: .regular, fallbackWeight: .regular) }
+        static var icon: Font { font(size: 12, role: .semibold, fallbackWeight: .semibold) }
+        static var star: Font { font(size: 13, role: .medium, fallbackWeight: .medium) }
+        static var checkmark: Font { font(size: 8, role: .bold, fallbackWeight: .bold, design: .default) }
+        static var emoji: Font { font(size: 38, role: .regular, fallbackWeight: .regular, design: .default) }
     }
 
     enum Size {
         static let partitionIndicator: CGFloat = 8
         static let checkbox: CGFloat = 14
         static let checkboxTapTarget: CGFloat = 24
+        static let starMarkerWidth: CGFloat = 3
+        static let starMarkerHeight: CGFloat = 18
+        static let starMarkerTapTargetWidth: CGFloat = 12
         static let trailingControl: CGFloat = 24
+        static let dueDateColumnMinWidth: CGFloat = 108
         static let partitionColorDot: CGFloat = 14
         static let modalPartitionDot: CGFloat = 10
         static let resizeHandleHeight: CGFloat = 6
@@ -93,8 +129,10 @@ enum DesignTokens {
         static let appMaxWidth: CGFloat = .infinity
         static let appMinHeight: CGFloat = 560
         static let datePopoverWidth: CGFloat = 280
-        static let emojiPlate: CGFloat = 76
+        static let emojiPlate: CGFloat = 48
         static let topGlow: CGFloat = 280
+        static let fontPreviewBarHeight: CGFloat = 86
+        static let fontPreviewChipHeight: CGFloat = 56
     }
 
     enum Motion {
@@ -140,8 +178,12 @@ enum DesignTokens {
         static let dueDate = Color(red: 0.27, green: 0.53, blue: 0.92)
         static let danger = Color(red: 0.94, green: 0.36, blue: 0.42)
         static let successMuted = Color(red: 0.16, green: 0.20, blue: 0.27).opacity(0.92)
-        static let warning = Color(red: 1.0, green: 0.93, blue: 0.55)
-        static let warningHover = Color(red: 1.0, green: 0.84, blue: 0.43)
+        static let warning = Color(red: 0.98, green: 0.76, blue: 0.08)
+        static let warningHover = Color(red: 1.0, green: 0.82, blue: 0.18)
+        static let dueDateUrgentTag = Color(red: 0.18, green: 0.21, blue: 0.26)
+        static let dueDateSoonTag = Color(red: 0.31, green: 0.35, blue: 0.41)
+        static let dueDateUpcomingTag = Color(red: 0.44, green: 0.49, blue: 0.56)
+        static let dueDateNeutralText = Color.white
         static let rowHover = Color.white.opacity(Opacity.rowHoverFill)
         static let inputBackground = Color.white.opacity(Opacity.inputFill)
         static let footerBackground = Color.white.opacity(0.22)

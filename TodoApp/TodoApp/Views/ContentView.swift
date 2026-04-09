@@ -42,7 +42,7 @@ struct ContentView: View {
                                 isScrollable: shouldScrollPartitions
                             )
                         )
-                    .frame(height: partitionsAreaHeight)
+                        .frame(height: partitionsAreaHeight)
 
                     CompletedSectionView(
                         tasks: viewModel.completedTasks,
@@ -56,6 +56,13 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
+        .font(
+            viewModel.selectedFontOption.swiftUIFont(
+                size: 14,
+                role: .regular,
+                fallbackWeight: .regular
+            )
+        )
         .background(
             WindowChromeController(hoverHeight: DesignTokens.Spacing.windowChromeHoverHeight)
         )
