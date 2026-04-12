@@ -38,10 +38,6 @@ struct ManagePartitionsView: View {
                             .font(DesignTokens.Typography.micro)
                             .foregroundStyle(DesignTokens.ColorRole.secondaryText)
 
-                        Circle()
-                            .fill(partition.color.color)
-                            .frame(width: DesignTokens.Size.modalPartitionDot, height: DesignTokens.Size.modalPartitionDot)
-
                         Text(partition.name.isEmpty ? "Untitled" : partition.name)
                             .font(DesignTokens.Typography.bodyMedium)
                             .foregroundStyle(DesignTokens.ColorRole.primaryText)

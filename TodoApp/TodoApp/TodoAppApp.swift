@@ -44,6 +44,7 @@ struct TodoAppApp: App {
                     viewModel.showManagePartitions = true
                 }
             }
+
         }
     }
 }

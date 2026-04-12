@@ -136,9 +136,8 @@ struct ContentView: View {
                     onToggleStar: { viewModel.toggleStar($0) },
                     onSetDueDate: { id, date in viewModel.setDueDate(id, date: date) },
                     onRename: { id, name in viewModel.renameTask(id, name: name) },
-                    onStartEdit: { viewModel.editingPartitionId = partition.id },
-                    onSaveEdit: { name, color in
-                        viewModel.savePartitionEdit(id: partition.id, name: name, color: color)
+                    onSaveEdit: { name in
+                        viewModel.savePartitionEdit(id: partition.id, name: name)
                     }
                 )
                 .frame(height: max(DesignTokens.Size.partitionMinHeight, partition.height))

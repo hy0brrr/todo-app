@@ -2,22 +2,20 @@ import SwiftUI
 
 struct PartitionEditView: View {
     let partition: Partition
-    let onSave: (String, PartitionColor) -> Void
+    let onSave: (String) -> Void
 
     @State private var editName: String
-    @State private var editColor: PartitionColor
     @FocusState private var isNameFocused: Bool
 
-    init(partition: Partition, onSave: @escaping (String, PartitionColor) -> Void) {
+    init(partition: Partition, onSave: @escaping (String) -> Void) {
         self.partition = partition
         self.onSave = onSave
         _editName = State(initialValue: partition.name)
-        _editColor = State(initialValue: partition.color)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
+            HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
                 TextField(
                     "",
                     text: $editName,
@@ -27,7 +25,7 @@ struct PartitionEditView: View {
                 .textFieldStyle(.plain)
                 .font(DesignTokens.Typography.captionStrong)
                 .padding(.horizontal, DesignTokens.Spacing.inputHorizontal)
-                .padding(.vertical, DesignTokens.Spacing.inputVertical)
+                .frame(height: DesignTokens.Size.trailingControl)
                 .background(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.field, style: .continuous)
                         .fill(DesignTokens.ColorRole.inputBackground)
@@ -35,38 +33,37 @@ struct PartitionEditView: View {
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .focused($isNameFocused)
                 .onSubmit {
-                    onSave(editName.isEmpty ? "Untitled" : editName, editColor)
+                    onSave(editName.isEmpty ? "Untitled" : editName)
                 }
 
+                Spacer(minLength: 0)
+
                 Button {
-                    onSave(editName.isEmpty ? "Untitled" : editName, editColor)
+                    onSave(editName.isEmpty ? "Untitled" : editName)
                 } label: {
                     Image(systemName: "checkmark")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(DesignTokens.ColorRole.accent)
+                        .font(DesignTokens.Typography.icon)
+                        .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                        .frame(
+                            width: DesignTokens.Size.trailingControl,
+                            height: DesignTokens.Size.trailingControl
+                        )
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
+            .frame(height: DesignTokens.Size.trailingControl, alignment: .leading)
 
-            HStack(spacing: 6) {
-                ForEach(PartitionColor.allCases, id: \.self) { c in
-                    Circle()
-                        .fill(c.color)
-                        .frame(width: DesignTokens.Size.partitionColorDot, height: DesignTokens.Size.partitionColorDot)
-                        .overlay(
-                            Circle()
-                                .strokeBorder(editColor == c ? DesignTokens.ColorRole.accent : Color.clear, lineWidth: 2)
-                                .padding(-2)
-                        )
-                        .onTapGesture {
-                            editColor = c
-                        }
-                }
-            }
+            Rectangle()
+                .fill(DesignTokens.ColorRole.headerRule)
+                .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
         }
         .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-        .padding(.vertical, DesignTokens.Spacing.sectionPaddingVertical)
+        .padding(.top, DesignTokens.Spacing.cardHeaderTop)
+        .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
         .background(DesignTokens.ColorRole.editPanelBackground)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             isNameFocused = true
         }

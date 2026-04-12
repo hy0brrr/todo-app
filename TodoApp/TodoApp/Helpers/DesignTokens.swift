@@ -26,6 +26,9 @@ enum DesignTokens {
         static let rowHorizontal: CGFloat = 12
         static let rowVertical: CGFloat = 8
         static let taskLeadingGap: CGFloat = 4
+        static let taskDueDateGap: CGFloat = 12
+        static let partitionTitleIconOpticalOffsetX: CGFloat = -0.5
+        static let addTaskPlusOpticalOffsetX: CGFloat = -0.5
         static let checkboxTitleOverhang: CGFloat = 2
         static let starMarkerLeadingOffset: CGFloat = -7
         static let dueDateTagHorizontal: CGFloat = 7
@@ -41,6 +44,10 @@ enum DesignTokens {
         static let cardTitleGap: CGFloat = 4
         static let partitionTitleInlineGap: CGFloat = 8
         static let partitionHeaderContentLeadingInset: CGFloat = 4
+        static let calendarGridGap: CGFloat = 6
+        static let calendarHeaderControlGap: CGFloat = 8
+        static let calendarPopoverHorizontal: CGFloat = 14
+        static let calendarPopoverVertical: CGFloat = 14
     }
 
     enum Radius {
@@ -51,6 +58,8 @@ enum DesignTokens {
         static let pill: CGFloat = 8
         static let titleTag: CGFloat = 6
         static let dueDateTag: CGFloat = 5
+        static let calendarDay: CGFloat = 9
+        static let calendarNavButton: CGFloat = 8
         static let starMarker: CGFloat = 2
         static let emojiPlate: CGFloat = 12
     }
@@ -132,14 +141,32 @@ enum DesignTokens {
     }
 
     enum Size {
+        private static func dueDateColumnWidthValue() -> CGFloat {
+            let font = NSFont(name: "PingFangSC-Regular", size: 11) ?? .systemFont(ofSize: 11, weight: .regular)
+            let widestLabel = ["Due Tomorrow", "Due Yesterday"]
+                .map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+                .max() ?? 0
+            let widestDueContent = max(
+                ceil(widestLabel + (Spacing.dueDateTagHorizontal * 2)),
+                trailingControl
+            )
+            let trailingInset = Spacing.sectionPaddingHorizontal
+                + Spacing.partitionHeaderContentLeadingInset
+                - Spacing.rowHorizontal
+
+            return ceil(Spacing.taskDueDateGap + widestDueContent + trailingInset)
+        }
+
         static let partitionIndicator: CGFloat = 8
         static let checkbox: CGFloat = 14
         static let checkboxTapTarget: CGFloat = 24
+        static let partitionTitleRowHeight: CGFloat = 20
+        static let inlineTextEditorHeight: CGFloat = 20
         static let starMarkerWidth: CGFloat = 3
         static let starMarkerHeight: CGFloat = 18
         static let starMarkerTapTargetWidth: CGFloat = 12
         static let trailingControl: CGFloat = 24
-        static let dueDateColumnMinWidth: CGFloat = 108
+        static let dueDateColumnWidth: CGFloat = dueDateColumnWidthValue()
         static let partitionColorDot: CGFloat = 14
         static let modalPartitionDot: CGFloat = 10
         static let resizeHandleHeight: CGFloat = 6
@@ -152,10 +179,15 @@ enum DesignTokens {
         static let appIdealWidth: CGFloat = 380
         static let appMaxWidth: CGFloat = .infinity
         static let appMinHeight: CGFloat = 560
-        static let datePopoverWidth: CGFloat = 280
+        static let datePopoverWidth: CGFloat = 260
+        static let calendarDayCell: CGFloat = 28
+        static let calendarNavControl: CGFloat = 24
         static let emojiPlate: CGFloat = 48
-        static let partitionTitleIcon: CGFloat = 12
-        static let partitionTitleIconStroke: CGFloat = 2.6
+        static let partitionTitleIcon: CGFloat = 15
+        static let partitionTitleIconInnerStroke: CGFloat = 2.4
+        static let partitionTitleIconOuterStroke: CGFloat = 3.8
+        static let partitionTitleIconArmLength: CGFloat = 7.6
+        static let partitionTitleIconArmOffset: CGFloat = 2.8
         static let topGlow: CGFloat = 280
     }
 
@@ -208,6 +240,10 @@ enum DesignTokens {
         static let dueDateSoonTag = Color(red: 0.31, green: 0.35, blue: 0.41)
         static let dueDateUpcomingTag = Color(red: 0.44, green: 0.49, blue: 0.56)
         static let dueDateNeutralText = Color.white
+        static let removeDate = Color(red: 0.84, green: 0.30, blue: 0.32)
+        static let removeDateHover = Color(red: 0.72, green: 0.20, blue: 0.24)
+        static let calendarHover = Color.black.opacity(0.05)
+        static let calendarTodayStroke = Color.black.opacity(0.14)
         static let rowHover = Color.white.opacity(Opacity.rowHoverFill)
         static let inputBackground = Color.white.opacity(Opacity.inputFill)
         static let footerBackground = Color.white.opacity(0.22)

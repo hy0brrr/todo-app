@@ -121,10 +121,9 @@ class TodoViewModel {
         editingPartitionId = newPartition.id
     }
 
-    func savePartitionEdit(id: String, name: String, color: PartitionColor) {
+    func savePartitionEdit(id: String, name: String) {
         guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
         partitions[index].name = name.isEmpty ? "Untitled" : name
-        partitions[index].color = color
         editingPartitionId = nil
     }
 
