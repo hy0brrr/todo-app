@@ -2,6 +2,20 @@ import XCTest
 @testable import TodoApp
 
 final class TodoViewModelV2Tests: XCTestCase {
+    func testPreviewLaunchContentSeedsDemoPartitionsAndTasks() {
+        let content = TodoViewModel.LaunchContent.demo
+
+        XCTAssertEqual(content.partitions.map(\.name), ["Work", "Life"])
+        XCTAssertFalse(content.tasks.isEmpty)
+    }
+
+    func testEmptyLaunchContentStartsWithoutDemoData() {
+        let content = TodoViewModel.LaunchContent.empty
+
+        XCTAssertTrue(content.partitions.isEmpty)
+        XCTAssertTrue(content.tasks.isEmpty)
+    }
+
     func testBracketSyntaxParsesNameAndTags() {
         let parsed = TodoTask.parseDisplayText("Write weekly review [work] [weekly]")
 

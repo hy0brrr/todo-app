@@ -1,5 +1,7 @@
 .DS_Store
 TodoApp/.build/
 TodoApp/.build-xcode/
+TodoApp/.build-release/
 TodoApp/TodoApp.xcodeproj/project.xcworkspace/xcuserdata/
 TodoApp/TodoApp.xcodeproj/xcuserdata/
+dist/

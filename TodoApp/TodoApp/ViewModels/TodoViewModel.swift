@@ -65,6 +65,38 @@ struct CompletedTaskGroup: Identifiable, Equatable {
 
 @Observable
 class TodoViewModel {
+    struct LaunchContent: Equatable {
+        let partitions: [Partition]
+        let tasks: [TodoTask]
+
+        static var empty: LaunchContent {
+            LaunchContent(partitions: [], tasks: [])
+        }
+
+        static var demo: LaunchContent {
+            let today = Calendar.current.startOfDay(for: Date())
+
+            return LaunchContent(
+                partitions: [
+                    Partition(id: "p1", name: "Work", color: .blue, height: 200),
+                    Partition(id: "p2", name: "Life", color: .green, height: 200),
+                ],
+                tasks: [
+                    TodoTask(id: "t1", partitionId: "p1", name: "整理第二季度产品需求", tags: ["Strategy", "Q2"], isStarred: true, createdAt: Date().addingTimeInterval(-10)),
+                    TodoTask(id: "t1-1", partitionId: "p1", name: "补齐竞品调研", parentTaskId: "t1", isStarred: true, createdAt: Date().addingTimeInterval(-9)),
+                    TodoTask(id: "t1-2", partitionId: "p1", name: "汇总访谈笔记", parentTaskId: "t1", createdAt: Date().addingTimeInterval(-8)),
+                    TodoTask(id: "t2", partitionId: "p1", name: "更新路线图", tags: ["Planning"], dueDate: today, createdAt: Date().addingTimeInterval(-5)),
+                    TodoTask(id: "t3", partitionId: "p1", name: "和设计同步细节", tags: ["Design"], createdAt: Date().addingTimeInterval(-2)),
+                    TodoTask(id: "t4", partitionId: "p2", name: "采购今晚食材", tags: ["Errands", "Home"], isStarred: true, createdAt: Date().addingTimeInterval(-8)),
+                    TodoTask(id: "t4-1", partitionId: "p2", name: "列一份购物清单", parentTaskId: "t4", createdAt: Date().addingTimeInterval(-7)),
+                    TodoTask(id: "t5", partitionId: "p2", name: "去拿洗好的衣服", tags: ["Errands"], createdAt: Date().addingTimeInterval(-4)),
+                    TodoTask(id: "t6", partitionId: "p1", name: "写周报", tags: ["Weekly"], isCompleted: true, createdAt: Date().addingTimeInterval(-20), completedAt: Date().addingTimeInterval(-1)),
+                    TodoTask(id: "t7", partitionId: "p2", name: "预订机票", tags: ["Travel"], isCompleted: true, createdAt: Date().addingTimeInterval(-25), completedAt: Date().addingTimeInterval(-0.5)),
+                ]
+            )
+        }
+    }
+
     var partitions: [Partition]
     var tasks: [TodoTask]
     var tagHistoryByPartition: [String: [String]]
@@ -86,27 +118,19 @@ class TodoViewModel {
         )
     }
 
-    convenience init() {
-        let today = Calendar.current.startOfDay(for: Date())
-
+    convenience init(launchContent: LaunchContent = TodoViewModel.defaultLaunchContent()) {
         self.init(
-            partitions: [
-                Partition(id: "p1", name: "Work", color: .blue, height: 200),
-                Partition(id: "p2", name: "Life", color: .green, height: 200),
-            ],
-            tasks: [
-                TodoTask(id: "t1", partitionId: "p1", name: "整理第二季度产品需求", tags: ["Strategy", "Q2"], isStarred: true, createdAt: Date().addingTimeInterval(-10)),
-                TodoTask(id: "t1-1", partitionId: "p1", name: "补齐竞品调研", parentTaskId: "t1", isStarred: true, createdAt: Date().addingTimeInterval(-9)),
-                TodoTask(id: "t1-2", partitionId: "p1", name: "汇总访谈笔记", parentTaskId: "t1", createdAt: Date().addingTimeInterval(-8)),
-                TodoTask(id: "t2", partitionId: "p1", name: "更新路线图", tags: ["Planning"], dueDate: today, createdAt: Date().addingTimeInterval(-5)),
-                TodoTask(id: "t3", partitionId: "p1", name: "和设计同步细节", tags: ["Design"], createdAt: Date().addingTimeInterval(-2)),
-                TodoTask(id: "t4", partitionId: "p2", name: "采购今晚食材", tags: ["Errands", "Home"], isStarred: true, createdAt: Date().addingTimeInterval(-8)),
-                TodoTask(id: "t4-1", partitionId: "p2", name: "列一份购物清单", parentTaskId: "t4", createdAt: Date().addingTimeInterval(-7)),
-                TodoTask(id: "t5", partitionId: "p2", name: "去拿洗好的衣服", tags: ["Errands"], createdAt: Date().addingTimeInterval(-4)),
-                TodoTask(id: "t6", partitionId: "p1", name: "写周报", tags: ["Weekly"], isCompleted: true, createdAt: Date().addingTimeInterval(-20), completedAt: Date().addingTimeInterval(-1)),
-                TodoTask(id: "t7", partitionId: "p2", name: "预订机票", tags: ["Travel"], isCompleted: true, createdAt: Date().addingTimeInterval(-25), completedAt: Date().addingTimeInterval(-0.5)),
-            ]
+            partitions: launchContent.partitions,
+            tasks: launchContent.tasks
         )
+    }
+
+    static func defaultLaunchContent() -> LaunchContent {
+#if DEBUG
+        return .demo
+#else
+        return .empty
+#endif
     }
 
     // MARK: - Computed Properties
