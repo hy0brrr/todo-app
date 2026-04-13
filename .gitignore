@@ -1,9 +1,5 @@
-# macOS
 .DS_Store
-
-# Xcode user data
-xcuserdata/
-*.xcuserstate
-
-# Node
-node_modules/
+TodoApp/.build/
+TodoApp/.build-xcode/
+TodoApp/TodoApp.xcodeproj/project.xcworkspace/xcuserdata/
+TodoApp/TodoApp.xcodeproj/xcuserdata/

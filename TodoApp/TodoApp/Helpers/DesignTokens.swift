@@ -27,6 +27,10 @@ enum DesignTokens {
         static let rowVertical: CGFloat = 8
         static let taskLeadingGap: CGFloat = 4
         static let taskDueDateGap: CGFloat = 12
+        static let taskMetaGap: CGFloat = 5
+        static let tagGap: CGFloat = 6
+        static let inlineTagTextGap: CGFloat = 6
+        static let childTaskIndent: CGFloat = 18
         static let partitionTitleIconOpticalOffsetX: CGFloat = -0.5
         static let addTaskPlusOpticalOffsetX: CGFloat = -0.5
         static let checkboxTitleOverhang: CGFloat = 2
@@ -40,6 +44,7 @@ enum DesignTokens {
         static let modalHeaderVertical: CGFloat = 12
         static let modalFooterVertical: CGFloat = 10
         static let modalListRowVertical: CGFloat = 3
+        static let editorSectionGap: CGFloat = 12
         static let cardHeaderGap: CGFloat = 12
         static let cardTitleGap: CGFloat = 4
         static let partitionTitleInlineGap: CGFloat = 8
@@ -169,10 +174,12 @@ enum DesignTokens {
         static let dueDateColumnWidth: CGFloat = dueDateColumnWidthValue()
         static let partitionColorDot: CGFloat = 14
         static let modalPartitionDot: CGFloat = 10
+        static let tagChipHeight: CGFloat = 22
         static let resizeHandleHeight: CGFloat = 6
         static let partitionMinHeight: CGFloat = 200
         static let completedMinHeight: CGFloat = 200
         static let modalWidth: CGFloat = 330
+        static let taskEditorWidth: CGFloat = 296
         static let modalMinHeight: CGFloat = 300
         static let modalMaxHeight: CGFloat = 500
         static let appMinWidth: CGFloat = 300

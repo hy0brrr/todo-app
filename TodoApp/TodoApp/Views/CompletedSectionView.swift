@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct CompletedSectionView: View {
-    let tasks: [TodoTask]
+    let groups: [CompletedTaskGroup]
+    let onSaveTask: (String, String) -> Void
+    let onAddChildTask: (String, String) -> Void
     let onToggleComplete: (String) -> Void
 
     var body: some View {
@@ -24,19 +26,39 @@ struct CompletedSectionView: View {
             // Completed tasks list
             ScrollView {
                 VStack(spacing: 0) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(tasks) { task in
-                            TaskItemView(
-                                task: task,
-                                onToggleComplete: onToggleComplete,
-                                onToggleStar: { _ in },
-                                onSetDueDate: { _, _ in },
-                                onRename: { _, _ in }
-                            )
+                    LazyVStack(spacing: 6) {
+                        ForEach(groups) { group in
+                            VStack(spacing: 0) {
+                                TaskItemView(
+                                    task: group.rootTask,
+                                    depth: 0,
+                                    renderMode: .completed,
+                                    allowsCompletionToggle: group.allowsRootCompletionToggle,
+                                    onSaveTask: onSaveTask,
+                                    onBeginAddChildTask: { _ in },
+                                    onToggleComplete: onToggleComplete,
+                                    onToggleStar: { _ in },
+                                    onSetDueDate: { _, _ in }
+                                )
+
+                                ForEach(group.completedChildren) { child in
+                                    TaskItemView(
+                                        task: child,
+                                        depth: 1,
+                                        renderMode: .completed,
+                                        allowsCompletionToggle: true,
+                                        onSaveTask: onSaveTask,
+                                        onBeginAddChildTask: { _ in },
+                                        onToggleComplete: onToggleComplete,
+                                        onToggleStar: { _ in },
+                                        onSetDueDate: { _, _ in }
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    if tasks.isEmpty {
+                    if groups.isEmpty {
                         Text("No completed tasks.")
                             .font(DesignTokens.Typography.caption)
                             .foregroundStyle(DesignTokens.ColorRole.secondaryText)
@@ -110,10 +132,22 @@ struct CompletedSectionView: View {
 
 #Preview {
     CompletedSectionView(
-        tasks: [
-            TodoTask(partitionId: "p1", name: "写周报", isCompleted: true, completedAt: Date()),
-            TodoTask(partitionId: "p2", name: "预订机票", isCompleted: true, completedAt: Date()),
+        groups: [
+            CompletedTaskGroup(
+                rootTask: TodoTask(partitionId: "p1", name: "写周报", tags: ["Weekly"], isCompleted: true, completedAt: Date()),
+                completedChildren: [],
+                showsParentContext: false
+            ),
+            CompletedTaskGroup(
+                rootTask: TodoTask(partitionId: "p2", name: "预订机票", tags: ["Travel"]),
+                completedChildren: [
+                    TodoTask(partitionId: "p2", name: "比较航班价格", parentTaskId: "t2", isCompleted: true, completedAt: Date())
+                ],
+                showsParentContext: true
+            )
         ],
+        onSaveTask: { _, _ in },
+        onAddChildTask: { _, _ in },
         onToggleComplete: { _ in }
     )
     .frame(width: 350, height: 200)

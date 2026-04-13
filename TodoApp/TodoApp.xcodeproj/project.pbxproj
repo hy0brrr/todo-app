@@ -21,6 +21,10 @@
 		A100000C /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* DesignTokens.swift */; };
 		A100000D /* WindowChromeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* WindowChromeController.swift */; };
 		A100000E /* LiquidGlassTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000E /* LiquidGlassTag.swift */; };
+		A100000F /* TaskEditorPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000F /* TaskEditorPopover.swift */; };
+		A1000010 /* ClickOutsideHitTesting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* ClickOutsideHitTesting.swift */; };
+		A1000011 /* EditingLayerInteractivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* EditingLayerInteractivity.swift */; };
+		A1000012 /* ChildTaskOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* ChildTaskOrdering.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +43,10 @@
 		B100000C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		B100000D /* WindowChromeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowChromeController.swift; sourceTree = "<group>"; };
 		B100000E /* LiquidGlassTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassTag.swift; sourceTree = "<group>"; };
+		B100000F /* TaskEditorPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorPopover.swift; sourceTree = "<group>"; };
+		B1000010 /* ClickOutsideHitTesting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickOutsideHitTesting.swift; sourceTree = "<group>"; };
+		B1000011 /* EditingLayerInteractivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingLayerInteractivity.swift; sourceTree = "<group>"; };
+		B1000012 /* ChildTaskOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildTaskOrdering.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +107,7 @@
 				B1000009 /* CompletedSectionView.swift */,
 				B100000A /* ManagePartitionsView.swift */,
 				B100000E /* LiquidGlassTag.swift */,
+				B100000F /* TaskEditorPopover.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -114,6 +123,9 @@
 		E1000007 /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				B1000012 /* ChildTaskOrdering.swift */,
+				B1000010 /* ClickOutsideHitTesting.swift */,
+				B1000011 /* EditingLayerInteractivity.swift */,
 				B100000B /* DateHelpers.swift */,
 				B100000C /* DesignTokens.swift */,
 				B100000D /* WindowChromeController.swift */,
@@ -187,6 +199,10 @@
 				A100000C /* DesignTokens.swift in Sources */,
 				A100000D /* WindowChromeController.swift in Sources */,
 				A100000E /* LiquidGlassTag.swift in Sources */,
+				A100000F /* TaskEditorPopover.swift in Sources */,
+				A1000010 /* ClickOutsideHitTesting.swift in Sources */,
+				A1000011 /* EditingLayerInteractivity.swift in Sources */,
+				A1000012 /* ChildTaskOrdering.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

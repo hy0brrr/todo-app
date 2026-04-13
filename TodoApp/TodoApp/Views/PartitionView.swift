@@ -1,42 +1,6 @@
 import SwiftUI
 import AppKit
 
-private final class PartitionTitleClickOutsideHandler {
-    private var monitor: Any?
-
-    func install(action: @escaping () -> Void) {
-        uninstall()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            guard let self else { return }
-
-            self.monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
-                if let contentView = event.window?.contentView {
-                    let locationInView = contentView.convert(event.locationInWindow, from: nil)
-                    if let hitView = contentView.hitTest(locationInView), !(hitView is NSTextView) {
-                        DispatchQueue.main.async {
-                            action()
-                        }
-                    }
-                }
-
-                return event
-            }
-        }
-    }
-
-    func uninstall() {
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
-        }
-    }
-
-    deinit {
-        uninstall()
-    }
-}
-
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard let editor = currentEditor() else {
@@ -96,6 +60,7 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
 
         if isEditing, !context.coordinator.wasEditing {
             context.coordinator.wasEditing = true
+            context.coordinator.beginEditingSession()
             DispatchQueue.main.async {
                 guard nsView.window != nil else { return }
                 nsView.window?.makeFirstResponder(nsView)
@@ -148,6 +113,9 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
         let onCancel: () -> Void
         weak var textField: NSTextField?
         var wasEditing = false
+        private var didBeginEditing = false
+        private var didCommitFromCommand = false
+        private var didCancelFromCommand = false
 
         init(text: Binding<String>, onCommit: @escaping () -> Void, onCancel: @escaping () -> Void) {
             self._text = text
@@ -155,19 +123,49 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
             self.onCancel = onCancel
         }
 
+        func beginEditingSession() {
+            didBeginEditing = false
+            didCommitFromCommand = false
+            didCancelFromCommand = false
+        }
+
         func controlTextDidChange(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
             text = textField.stringValue
         }
 
+        func controlTextDidBeginEditing(_ obj: Notification) {
+            didBeginEditing = true
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            text = textField.stringValue
+
+            defer {
+                didBeginEditing = false
+                didCommitFromCommand = false
+                didCancelFromCommand = false
+            }
+
+            guard EditingLayerInteractivity.shouldCommitOnEndEditing(
+                didBeginEditing: didBeginEditing,
+                didCommitFromCommand: didCommitFromCommand,
+                didCancelFromCommand: didCancelFromCommand
+            ) else { return }
+            onCommit()
+        }
+
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 text = textView.string
+                didCommitFromCommand = true
                 onCommit()
                 return true
             }
 
             if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                didCancelFromCommand = true
                 onCancel()
                 return true
             }
@@ -179,19 +177,22 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
 
 struct PartitionView: View {
     let partition: Partition
-    let tasks: [TodoTask]
+    let taskGroups: [ActiveTaskGroup]
     let isEditing: Bool
     let onAddTask: (String, String) -> Void
+    let onAddChildTask: (String, String) -> Void
     let onToggleComplete: (String) -> Void
     let onToggleStar: (String) -> Void
     let onSetDueDate: (String, Date?) -> Void
-    let onRename: (String, String) -> Void
+    let onSaveTask: (String, String) -> Void
     let onSaveEdit: (String) -> Void
 
     @State private var newTaskName: String = ""
     @State private var isEditingTitle = false
     @State private var editingTitle = ""
-    @State private var clickHandler = PartitionTitleClickOutsideHandler()
+    @State private var childDraftParentTaskId: String?
+    @State private var childDraftText: String = ""
+    @FocusState private var focusedChildDraftParentTaskId: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -201,18 +202,45 @@ struct PartitionView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     LazyVStack(spacing: 0) {
-                        ForEach(tasks) { task in
+                        ForEach(taskGroups) { group in
+                            let childRows = ChildTaskOrdering.orderedRows(
+                                for: group.children,
+                                parentTaskId: group.rootTask.id,
+                                showInlineDraft: childDraftParentTaskId == group.rootTask.id
+                            )
+
                             TaskItemView(
-                                task: task,
+                                task: group.rootTask,
+                                depth: 0,
+                                renderMode: .active,
+                                onSaveTask: onSaveTask,
+                                onBeginAddChildTask: beginInlineChildTaskCreation,
                                 onToggleComplete: onToggleComplete,
                                 onToggleStar: onToggleStar,
-                                onSetDueDate: onSetDueDate,
-                                onRename: onRename
+                                onSetDueDate: onSetDueDate
                             )
+
+                            ForEach(childRows) { row in
+                                switch row {
+                                case .child(let child):
+                                    TaskItemView(
+                                        task: child,
+                                        depth: 1,
+                                        renderMode: .active,
+                                        onSaveTask: onSaveTask,
+                                        onBeginAddChildTask: beginInlineChildTaskCreation,
+                                        onToggleComplete: onToggleComplete,
+                                        onToggleStar: onToggleStar,
+                                        onSetDueDate: onSetDueDate
+                                    )
+                                case .inlineDraft(let parentTaskId):
+                                    inlineChildDraftRow(parentTaskId: parentTaskId)
+                                }
+                            }
                         }
                     }
 
-                    if tasks.isEmpty {
+                    if taskGroups.isEmpty {
                         Text("No tasks yet.")
                             .font(DesignTokens.Typography.caption)
                             .foregroundStyle(DesignTokens.ColorRole.secondaryText)
@@ -252,6 +280,10 @@ struct PartitionView: View {
             guard newValue else { return }
             beginTitleEditing()
         }
+        .onChange(of: focusedChildDraftParentTaskId) { oldValue, newValue in
+            guard oldValue != nil, newValue == nil else { return }
+            finalizeInlineChildTaskCreation()
+        }
     }
 
     private var partitionHeader: some View {
@@ -287,6 +319,7 @@ struct PartitionView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .opacity(isEditingTitle ? 0 : 1)
+                    .allowsHitTesting(EditingLayerInteractivity.shouldAllowStaticDisplayHitTesting(isEditing: isEditingTitle))
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
                         beginTitleEditing()
@@ -319,7 +352,7 @@ struct PartitionView: View {
             TextField(
                 "",
                 text: $newTaskName,
-                prompt: Text("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name)")
+                prompt: Text("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name) with [tag]")
                     .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
             )
                 .textFieldStyle(.plain)
@@ -335,6 +368,44 @@ struct PartitionView: View {
         .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
         .padding(.vertical, 6)
         .background(DesignTokens.ColorRole.footerBackground)
+    }
+
+    @ViewBuilder
+    private func inlineChildDraftRow(parentTaskId: String) -> some View {
+        HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
+            Image(systemName: "plus")
+                .font(DesignTokens.Typography.icon)
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                .frame(
+                    width: DesignTokens.Size.checkboxTapTarget,
+                    height: DesignTokens.Size.checkboxTapTarget
+                )
+                .padding(.leading, checkboxAlignedLeadingInset)
+                .frame(width: leadingControlWidth, height: DesignTokens.Size.checkboxTapTarget, alignment: .leading)
+                .offset(x: DesignTokens.Spacing.addTaskPlusOpticalOffsetX)
+
+            TextField("", text: $childDraftText, prompt: Text("Add subtask with [tag]")
+                .foregroundStyle(DesignTokens.ColorRole.tertiaryText))
+                .textFieldStyle(.plain)
+                .font(DesignTokens.Typography.body)
+                .foregroundStyle(DesignTokens.ColorRole.primaryText)
+                .focused($focusedChildDraftParentTaskId, equals: parentTaskId)
+                .onSubmit {
+                    createInlineChildTask()
+                }
+        }
+        .padding(.leading, DesignTokens.Spacing.childTaskIndent)
+        .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
+        .padding(.vertical, DesignTokens.Spacing.rowVertical)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.row, style: .continuous)
+                .fill(Color.clear)
+        )
+        .onAppear {
+            DispatchQueue.main.async {
+                focusedChildDraftParentTaskId = parentTaskId
+            }
+        }
     }
 
     private var cardBackground: some View {
@@ -375,13 +446,45 @@ struct PartitionView: View {
     private func beginTitleEditing() {
         editingTitle = partition.name
         isEditingTitle = true
-        clickHandler.install { [self] in
-            commitTitleEdit()
+    }
+
+    private func beginInlineChildTaskCreation(parentTaskId: String) {
+        childDraftParentTaskId = parentTaskId
+        childDraftText = ""
+        DispatchQueue.main.async {
+            focusedChildDraftParentTaskId = parentTaskId
         }
     }
 
+    private func createInlineChildTask() {
+        guard let parentTaskId = childDraftParentTaskId else { return }
+        let trimmed = childDraftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            resetInlineChildDraft()
+            return
+        }
+
+        onAddChildTask(parentTaskId, trimmed)
+        resetInlineChildDraft()
+    }
+
+    private func finalizeInlineChildTaskCreation() {
+        let trimmed = childDraftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            resetInlineChildDraft()
+            return
+        }
+
+        createInlineChildTask()
+    }
+
+    private func resetInlineChildDraft() {
+        childDraftParentTaskId = nil
+        childDraftText = ""
+        focusedChildDraftParentTaskId = nil
+    }
+
     private func commitTitleEdit() {
-        clickHandler.uninstall()
         isEditingTitle = false
 
         let trimmed = editingTitle.trimmingCharacters(in: .whitespaces)
@@ -389,12 +492,26 @@ struct PartitionView: View {
     }
 
     private func cancelTitleEdit() {
-        clickHandler.uninstall()
         isEditingTitle = false
 
         if isEditing {
             onSaveEdit(partition.name.isEmpty ? "Untitled" : partition.name)
         }
+    }
+
+    private var leadingControlWidth: CGFloat {
+        return max(
+            checkboxAlignedLeadingInset + DesignTokens.Size.checkboxTapTarget,
+            DesignTokens.Size.starMarkerTapTargetWidth
+        )
+    }
+
+    private var checkboxAlignedLeadingInset: CGFloat {
+        let checkboxVisualInset = (DesignTokens.Size.checkboxTapTarget - DesignTokens.Size.checkbox) / 2
+        return DesignTokens.Spacing.sectionPaddingHorizontal
+            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
+            - DesignTokens.Spacing.rowHorizontal
+            - checkboxVisualInset
     }
 }
 
@@ -403,16 +520,23 @@ struct PartitionView: View {
 #Preview {
     PartitionView(
         partition: Partition(name: "Work", color: .blue),
-        tasks: [
-            TodoTask(partitionId: "p1", name: "整理第二季度产品需求", isStarred: true),
-            TodoTask(partitionId: "p1", name: "更新路线图", dueDate: Date()),
+        taskGroups: [
+            ActiveTaskGroup(
+                rootTask: TodoTask(partitionId: "p1", name: "整理第二季度产品需求", tags: ["Strategy"], isStarred: true),
+                children: [TodoTask(partitionId: "p1", name: "补齐竞品调研", parentTaskId: "root")]
+            ),
+            ActiveTaskGroup(
+                rootTask: TodoTask(partitionId: "p1", name: "更新路线图", tags: ["Planning"], dueDate: Date()),
+                children: []
+            )
         ],
         isEditing: false,
         onAddTask: { _, _ in },
+        onAddChildTask: { _, _ in },
         onToggleComplete: { _ in },
         onToggleStar: { _ in },
         onSetDueDate: { _, _ in },
-        onRename: { _, _ in },
+        onSaveTask: { _, _ in },
         onSaveEdit: { _ in }
     )
     .frame(width: 350, height: 250)

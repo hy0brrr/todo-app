@@ -1,48 +1,6 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Click-Outside Monitor (macOS)
-
-/// Monitors for mouse-down events outside of NSTextView (which backs SwiftUI TextField).
-/// When a click is detected outside the text field, it fires the provided action.
-private class ClickOutsideHandler {
-    private var monitor: Any?
-
-    func install(action: @escaping () -> Void) {
-        uninstall()
-        // Delay slightly to avoid catching the double-click that triggered editing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            guard self != nil else { return }
-            self?.monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
-                if let contentView = event.window?.contentView {
-                    let locationInView = contentView.convert(event.locationInWindow, from: nil)
-                    if let hitView = contentView.hitTest(locationInView) {
-                        // NSTextView is the AppKit view backing a SwiftUI TextField.
-                        // If the click target is NOT a text view, the user clicked outside.
-                        if !(hitView is NSTextView) {
-                            DispatchQueue.main.async {
-                                action()
-                            }
-                        }
-                    }
-                }
-                return event
-            }
-        }
-    }
-
-    func uninstall() {
-        if let monitor = monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
-        }
-    }
-
-    deinit {
-        uninstall()
-    }
-}
-
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard let editor = currentEditor() else {
@@ -101,6 +59,7 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
 
         if isEditing, !context.coordinator.wasEditing {
             context.coordinator.wasEditing = true
+            context.coordinator.beginEditingSession()
             DispatchQueue.main.async {
                 guard nsView.window != nil else { return }
                 nsView.window?.makeFirstResponder(nsView)
@@ -153,6 +112,9 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
         let onCancel: () -> Void
         weak var textField: NSTextField?
         var wasEditing = false
+        private var didBeginEditing = false
+        private var didCommitFromCommand = false
+        private var didCancelFromCommand = false
 
         init(text: Binding<String>, onCommit: @escaping () -> Void, onCancel: @escaping () -> Void) {
             self._text = text
@@ -160,19 +122,49 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
             self.onCancel = onCancel
         }
 
+        func beginEditingSession() {
+            didBeginEditing = false
+            didCommitFromCommand = false
+            didCancelFromCommand = false
+        }
+
         func controlTextDidChange(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
             text = textField.stringValue
         }
 
+        func controlTextDidBeginEditing(_ obj: Notification) {
+            didBeginEditing = true
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            text = textField.stringValue
+
+            defer {
+                didBeginEditing = false
+                didCommitFromCommand = false
+                didCancelFromCommand = false
+            }
+
+            guard EditingLayerInteractivity.shouldCommitOnEndEditing(
+                didBeginEditing: didBeginEditing,
+                didCommitFromCommand: didCommitFromCommand,
+                didCancelFromCommand: didCancelFromCommand
+            ) else { return }
+            onCommit()
+        }
+
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 text = textView.string
+                didCommitFromCommand = true
                 onCommit()
                 return true
             }
 
             if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                didCancelFromCommand = true
                 onCancel()
                 return true
             }
@@ -184,12 +176,36 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
 
 // MARK: - Task Item View
 
+enum TaskItemRenderMode {
+    case active
+    case completed
+}
+
+enum StarMarkerPresentation {
+    static func allowsInteraction(renderMode: TaskItemRenderMode) -> Bool {
+        renderMode == .active
+    }
+
+    static func showsMarker(
+        taskIsStarred: Bool,
+        renderMode: TaskItemRenderMode,
+        isHoveringRow: Bool,
+        isHoveringMarker: Bool
+    ) -> Bool {
+        taskIsStarred || (renderMode == .active && (isHoveringRow || isHoveringMarker))
+    }
+}
+
 struct TaskItemView: View {
     let task: TodoTask
+    let depth: Int
+    let renderMode: TaskItemRenderMode
+    let allowsCompletionToggle: Bool
+    let onSaveTask: (String, String) -> Void
+    let onBeginAddChildTask: (String) -> Void
     let onToggleComplete: (String) -> Void
     let onToggleStar: (String) -> Void
     let onSetDueDate: (String, Date?) -> Void
-    let onRename: (String, String) -> Void
 
     @State private var isHovering = false
     @State private var showDatePicker = false
@@ -201,40 +217,40 @@ struct TaskItemView: View {
     @State private var isHoveringStar = false
     @State private var isHoveringCalendar = false
 
-    @State private var clickHandler = ClickOutsideHandler()
+    init(
+        task: TodoTask,
+        depth: Int,
+        renderMode: TaskItemRenderMode,
+        allowsCompletionToggle: Bool = true,
+        onSaveTask: @escaping (String, String) -> Void,
+        onBeginAddChildTask: @escaping (String) -> Void,
+        onToggleComplete: @escaping (String) -> Void,
+        onToggleStar: @escaping (String) -> Void,
+        onSetDueDate: @escaping (String, Date?) -> Void
+    ) {
+        self.task = task
+        self.depth = depth
+        self.renderMode = renderMode
+        self.allowsCompletionToggle = allowsCompletionToggle
+        self.onSaveTask = onSaveTask
+        self.onBeginAddChildTask = onBeginAddChildTask
+        self.onToggleComplete = onToggleComplete
+        self.onToggleStar = onToggleStar
+        self.onSetDueDate = onSetDueDate
+    }
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
             leadingControls
 
-            ZStack(alignment: .leading) {
-                Text(task.name)
-                    .font(DesignTokens.Typography.body)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .foregroundStyle(task.isCompleted ? DesignTokens.ColorRole.secondaryText : DesignTokens.ColorRole.primaryText)
-                    .strikethrough(task.isCompleted, color: DesignTokens.ColorRole.secondaryText)
-                    .opacity(isEditing ? 0 : 1)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        guard !task.isCompleted else { return }
-                        beginRename()
-                    }
-
-                InlineTaskNameEditor(
-                    text: $editingName,
-                    isEditing: isEditing,
-                    onCommit: commitRename,
-                    onCancel: cancelRename
-                )
-            }
-            .frame(height: DesignTokens.Size.inlineTextEditorHeight)
+            taskContent
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !task.isCompleted {
+            if showsDueDateControl {
                 dueDateControl
             }
         }
+        .padding(.leading, CGFloat(depth) * DesignTokens.Spacing.childTaskIndent)
         .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
         .padding(.vertical, DesignTokens.Spacing.rowVertical)
         .background(
@@ -247,6 +263,13 @@ struct TaskItemView: View {
                 isHovering = true
             } else {
                 isHovering = hovering
+            }
+        }
+        .contextMenu {
+            if task.isRootTask && renderMode == .active {
+                Button("New Child Task") {
+                    onBeginAddChildTask(task.id)
+                }
             }
         }
     }
@@ -267,22 +290,80 @@ struct TaskItemView: View {
         )
     }
 
+    private var taskContent: some View {
+        HStack(spacing: DesignTokens.Spacing.tagGap) {
+            ZStack(alignment: .leading) {
+                renderedTaskSegments
+                    .opacity(isEditing ? 0 : 1)
+                    .allowsHitTesting(EditingLayerInteractivity.shouldAllowStaticDisplayHitTesting(isEditing: isEditing))
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        guard renderMode == .active else { return }
+                        beginRename()
+                    }
+
+                InlineTaskNameEditor(
+                    text: $editingName,
+                    isEditing: isEditing,
+                    onCommit: commitRename,
+                    onCancel: cancelRename
+                )
+            }
+            .frame(height: DesignTokens.Size.inlineTextEditorHeight)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var renderedTaskSegments: some View {
+        let segments = task.renderSegments
+
+        return HStack(spacing: 0) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
+                switch segment {
+                case .text(let text):
+                    Text(text)
+                        .font(DesignTokens.Typography.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .foregroundStyle(taskNameColor)
+                        .strikethrough(task.isCompleted, color: DesignTokens.ColorRole.secondaryText)
+                        .padding(.trailing, trailingGap(after: index, segments: segments))
+                case .tag(let tag):
+                    TaskTagChip(
+                        text: tag,
+                        style: renderMode == .completed ? .completed : .active
+                    )
+                    .fixedSize()
+                    .padding(.trailing, trailingGap(after: index, segments: segments))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func trailingGap(after index: Int, segments: [TaskTextSegment]) -> CGFloat {
+        guard index < segments.count - 1 else { return 0 }
+        return segments[index].isTag || segments[index + 1].isTag
+            ? DesignTokens.Spacing.inlineTagTextGap
+            : 0
+    }
+
     private var checkboxButton: some View {
         Button {
+            guard allowsCompletionToggle else { return }
             onToggleComplete(task.id)
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
                     .strokeBorder(
-                        task.isCompleted
-                            ? DesignTokens.ColorRole.successMuted
-                            : (isHoveringCheckbox ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText),
+                        checkboxStrokeColor,
                         lineWidth: DesignTokens.Stroke.checkboxLineWidth
                     )
                     .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
                     .background(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
-                            .fill(task.isCompleted ? DesignTokens.ColorRole.successMuted : Color.clear)
+                            .fill(checkboxFillColor)
                     )
                 if task.isCompleted {
                     Image(systemName: "checkmark")
@@ -295,30 +376,40 @@ struct TaskItemView: View {
         }
         .buttonStyle(.plain)
         .onHover { isHoveringCheckbox = $0 }
+        .allowsHitTesting(allowsCompletionToggle)
     }
 
+    @ViewBuilder
     private var starMarkerButton: some View {
-        Button {
-            onToggleStar(task.id)
-        } label: {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.starMarker, style: .continuous)
-                .fill(starMarkerColor)
-                .frame(
-                    width: DesignTokens.Size.starMarkerWidth,
-                    height: DesignTokens.Size.starMarkerHeight
-                )
-                .rotationEffect(.degrees(14))
-                .frame(
-                    width: DesignTokens.Size.starMarkerTapTargetWidth,
-                    height: DesignTokens.Size.checkboxTapTarget
-                )
-                .contentShape(Rectangle())
+        let marker = RoundedRectangle(cornerRadius: DesignTokens.Radius.starMarker, style: .continuous)
+            .fill(starMarkerColor)
+            .frame(
+                width: DesignTokens.Size.starMarkerWidth,
+                height: DesignTokens.Size.starMarkerHeight
+            )
+            .rotationEffect(.degrees(14))
+            .frame(
+                width: DesignTokens.Size.starMarkerTapTargetWidth,
+                height: DesignTokens.Size.checkboxTapTarget
+            )
+            .contentShape(Rectangle())
+            .offset(x: DesignTokens.Spacing.starMarkerLeadingOffset)
+
+        if StarMarkerPresentation.allowsInteraction(renderMode: renderMode) {
+            Button {
+                onToggleStar(task.id)
+            } label: {
+                marker
+            }
+            .buttonStyle(.plain)
+            .onHover { isHoveringStar = $0 }
+            .allowsHitTesting(task.isStarred || isHovering || isHoveringStar)
+            .accessibilityLabel(task.isStarred ? "Remove star" : "Mark as starred")
+        } else {
+            marker
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
-        .buttonStyle(.plain)
-        .onHover { isHoveringStar = $0 }
-        .offset(x: DesignTokens.Spacing.starMarkerLeadingOffset)
-        .allowsHitTesting(task.isStarred || isHovering || isHoveringStar)
-        .accessibilityLabel(task.isStarred ? "Remove star" : "Mark as starred")
     }
 
     @ViewBuilder
@@ -406,6 +497,10 @@ struct TaskItemView: View {
         .frame(width: DesignTokens.Size.dueDateColumnWidth, alignment: .trailing)
     }
 
+    private var showsDueDateControl: Bool {
+        renderMode == .active && !task.isCompleted
+    }
+
     private func dueDateTag(text: String, background: Color) -> some View {
         Text(text)
             .font(DesignTokens.Typography.dueDateTag)
@@ -433,16 +528,57 @@ struct TaskItemView: View {
     }
 
     private var starMarkerColor: Color {
+        guard StarMarkerPresentation.showsMarker(
+            taskIsStarred: task.isStarred,
+            renderMode: renderMode,
+            isHoveringRow: isHovering,
+            isHoveringMarker: isHoveringStar
+        ) else {
+            return .clear
+        }
+
         if task.isStarred {
-            return DesignTokens.ColorRole.dueDateUrgentTag
+            return task.isRootTask
+                ? DesignTokens.ColorRole.dueDateUrgentTag
+                : DesignTokens.ColorRole.primaryText.opacity(0.56)
         }
 
         if isHoveringStar {
-            return .white
+            return task.isRootTask ? .white : Color.white.opacity(0.82)
         }
 
         if isHovering {
-            return Color.white.opacity(DesignTokens.Spacing.starMarkerPreviewOpacity)
+            return task.isRootTask
+                ? Color.white.opacity(DesignTokens.Spacing.starMarkerPreviewOpacity)
+                : DesignTokens.ColorRole.secondaryText.opacity(0.32)
+        }
+
+        return .clear
+    }
+
+    private var taskNameColor: Color {
+        task.isCompleted ? DesignTokens.ColorRole.secondaryText : DesignTokens.ColorRole.primaryText
+    }
+
+    private var checkboxStrokeColor: Color {
+        guard allowsCompletionToggle else {
+            return DesignTokens.ColorRole.secondaryText.opacity(0.45)
+        }
+
+        if task.isCompleted {
+            return DesignTokens.ColorRole.successMuted
+        }
+
+        return isHoveringCheckbox ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText
+    }
+
+    private var checkboxFillColor: Color {
+        if task.isCompleted {
+            return DesignTokens.ColorRole.successMuted
+        }
+
+        if !allowsCompletionToggle {
+            return DesignTokens.ColorRole.secondaryText.opacity(0.14)
         }
 
         return .clear
@@ -463,25 +599,27 @@ struct TaskItemView: View {
     }
 
     private func commitRename() {
-        clickHandler.uninstall()
-        let trimmed = editingName.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty {
-            onRename(task.id, trimmed)
+        let parsed = TodoTask.parseDisplayText(editingName)
+        if !parsed.name.isEmpty {
+            onSaveTask(task.id, parsed.markupText)
         }
         isEditing = false
     }
 
     private func cancelRename() {
-        clickHandler.uninstall()
         isEditing = false
     }
 
     private func beginRename() {
-        editingName = task.name
+        editingName = task.displayText
         isEditing = true
-        clickHandler.install { [self] in
-            commitRename()
-        }
+    }
+}
+
+private extension TaskTextSegment {
+    var isTag: Bool {
+        if case .tag = self { return true }
+        return false
     }
 }
 
@@ -722,25 +860,34 @@ private struct CalendarDayCell: Identifiable {
 #Preview {
     VStack(spacing: 0) {
         TaskItemView(
-            task: TodoTask(partitionId: "p1", name: "今晚提交首页视觉稿", isStarred: true, dueDate: Date()),
+            task: TodoTask(partitionId: "p1", name: "今晚提交首页视觉稿", tags: ["Brand", "Launch"], isStarred: true, dueDate: Date()),
+            depth: 0,
+            renderMode: .active,
+            onSaveTask: { _, _ in },
+            onBeginAddChildTask: { _ in },
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
-            onSetDueDate: { _, _ in },
-            onRename: { _, _ in }
+            onSetDueDate: { _, _ in }
         )
         TaskItemView(
-            task: TodoTask(partitionId: "p1", name: "整理会议记录"),
+            task: TodoTask(partitionId: "p1", name: "整理会议记录", parentTaskId: "root"),
+            depth: 1,
+            renderMode: .active,
+            onSaveTask: { _, _ in },
+            onBeginAddChildTask: { _ in },
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
-            onSetDueDate: { _, _ in },
-            onRename: { _, _ in }
+            onSetDueDate: { _, _ in }
         )
         TaskItemView(
             task: TodoTask(partitionId: "p1", name: "发送周报", isCompleted: true),
+            depth: 0,
+            renderMode: .completed,
+            onSaveTask: { _, _ in },
+            onBeginAddChildTask: { _ in },
             onToggleComplete: { _ in },
             onToggleStar: { _ in },
-            onSetDueDate: { _, _ in },
-            onRename: { _, _ in }
+            onSetDueDate: { _, _ in }
         )
     }
     .padding()

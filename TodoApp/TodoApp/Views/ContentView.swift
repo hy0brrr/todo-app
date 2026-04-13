@@ -43,7 +43,13 @@ struct ContentView: View {
                         .frame(height: partitionsAreaHeight)
 
                     CompletedSectionView(
-                        tasks: viewModel.completedTasks,
+                        groups: viewModel.completedTaskGroups,
+                        onSaveTask: { id, rawText in
+                            viewModel.updateTask(id: id, rawText: rawText)
+                        },
+                        onAddChildTask: { parentId, name in
+                            viewModel.addChildTask(parentTaskId: parentId, rawText: name)
+                        },
                         onToggleComplete: { viewModel.toggleComplete($0) }
                     )
                     .frame(height: completedHeight)
@@ -129,13 +135,20 @@ struct ContentView: View {
             ForEach(viewModel.partitions) { partition in
                 PartitionView(
                     partition: partition,
-                    tasks: viewModel.activeTasks(for: partition.id),
+                    taskGroups: viewModel.activeTaskGroups(for: partition.id),
                     isEditing: viewModel.editingPartitionId == partition.id,
-                    onAddTask: { pid, name in viewModel.addTask(partitionId: pid, name: name) },
+                    onAddTask: { pid, rawText in
+                        viewModel.addTask(partitionId: pid, rawText: rawText)
+                    },
+                    onAddChildTask: { parentId, name in
+                        viewModel.addChildTask(parentTaskId: parentId, rawText: name)
+                    },
                     onToggleComplete: { viewModel.toggleComplete($0) },
                     onToggleStar: { viewModel.toggleStar($0) },
                     onSetDueDate: { id, date in viewModel.setDueDate(id, date: date) },
-                    onRename: { id, name in viewModel.renameTask(id, name: name) },
+                    onSaveTask: { id, rawText in
+                        viewModel.updateTask(id: id, rawText: rawText)
+                    },
                     onSaveEdit: { name in
                         viewModel.savePartitionEdit(id: partition.id, name: name)
                     }
