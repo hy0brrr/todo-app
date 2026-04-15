@@ -25,6 +25,7 @@
 		A1000010 /* ClickOutsideHitTesting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* ClickOutsideHitTesting.swift */; };
 		A1000011 /* EditingLayerInteractivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* EditingLayerInteractivity.swift */; };
 		A1000012 /* ChildTaskOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* ChildTaskOrdering.swift */; };
+		A1000013 /* TodoPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* TodoPersistenceStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 		B1000010 /* ClickOutsideHitTesting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickOutsideHitTesting.swift; sourceTree = "<group>"; };
 		B1000011 /* EditingLayerInteractivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingLayerInteractivity.swift; sourceTree = "<group>"; };
 		B1000012 /* ChildTaskOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildTaskOrdering.swift; sourceTree = "<group>"; };
+		B1000013 /* TodoPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoPersistenceStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 				B1000011 /* EditingLayerInteractivity.swift */,
 				B100000B /* DateHelpers.swift */,
 				B100000C /* DesignTokens.swift */,
+				B1000013 /* TodoPersistenceStore.swift */,
 				B100000D /* WindowChromeController.swift */,
 			);
 			path = Helpers;
@@ -203,6 +206,7 @@
 				A1000010 /* ClickOutsideHitTesting.swift in Sources */,
 				A1000011 /* EditingLayerInteractivity.swift in Sources */,
 				A1000012 /* ChildTaskOrdering.swift in Sources */,
+				A1000013 /* TodoPersistenceStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,7 +336,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
@@ -341,7 +345,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.todoapp.TodoApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -358,7 +362,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
@@ -367,7 +371,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.todoapp.TodoApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

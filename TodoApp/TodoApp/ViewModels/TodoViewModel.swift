@@ -65,12 +65,18 @@ struct CompletedTaskGroup: Identifiable, Equatable {
 
 @Observable
 class TodoViewModel {
+    struct LaunchConfiguration: Equatable {
+        let content: LaunchContent
+        let isPersistenceEnabled: Bool
+    }
+
     struct LaunchContent: Equatable {
         let partitions: [Partition]
         let tasks: [TodoTask]
+        let tagHistoryByPartition: [String: [String]]
 
         static var empty: LaunchContent {
-            LaunchContent(partitions: [], tasks: [])
+            LaunchContent(partitions: [], tasks: [], tagHistoryByPartition: [:])
         }
 
         static var demo: LaunchContent {
@@ -92,24 +98,42 @@ class TodoViewModel {
                     TodoTask(id: "t5", partitionId: "p2", name: "去拿洗好的衣服", tags: ["Errands"], createdAt: Date().addingTimeInterval(-4)),
                     TodoTask(id: "t6", partitionId: "p1", name: "写周报", tags: ["Weekly"], isCompleted: true, createdAt: Date().addingTimeInterval(-20), completedAt: Date().addingTimeInterval(-1)),
                     TodoTask(id: "t7", partitionId: "p2", name: "预订机票", tags: ["Travel"], isCompleted: true, createdAt: Date().addingTimeInterval(-25), completedAt: Date().addingTimeInterval(-0.5)),
+                ],
+                tagHistoryByPartition: [
+                    "p1": ["Strategy", "Q2", "Planning", "Design", "Weekly"],
+                    "p2": ["Errands", "Home", "Travel"],
                 ]
             )
         }
     }
 
-    var partitions: [Partition]
-    var tasks: [TodoTask]
-    var tagHistoryByPartition: [String: [String]]
+    var partitions: [Partition] {
+        didSet { stateDidChange() }
+    }
+    var tasks: [TodoTask] {
+        didSet { stateDidChange() }
+    }
+    var tagHistoryByPartition: [String: [String]] {
+        didSet { stateDidChange() }
+    }
     var editingPartitionId: String? = nil
     var showManagePartitions: Bool = false
     var sidebarWidth: CGFloat = 320
+    private let persistenceStore: TodoPersistenceStore?
+    private var isPersistenceEnabled: Bool
+    private var persistenceMutationDepth = 0
+    private var hasPendingPersistence = false
 
     init(
         partitions: [Partition],
         tasks: [TodoTask],
-        tagHistoryByPartition: [String: [String]]? = nil
+        tagHistoryByPartition: [String: [String]]? = nil,
+        persistenceStore: TodoPersistenceStore? = nil,
+        isPersistenceEnabled: Bool = true
     ) {
         TitleFontRegistrar.registerLocalPreviewFonts()
+        self.persistenceStore = persistenceStore
+        self.isPersistenceEnabled = isPersistenceEnabled
         self.partitions = partitions
         self.tasks = tasks
         self.tagHistoryByPartition = TodoViewModel.buildTagHistory(
@@ -118,22 +142,93 @@ class TodoViewModel {
         )
     }
 
-    convenience init(launchContent: LaunchContent = TodoViewModel.defaultLaunchContent()) {
+    convenience init(
+        launchContent: LaunchContent? = nil,
+        persistenceStore: TodoPersistenceStore? = TodoPersistenceStore(),
+        isDebugBuild: Bool = _isDebugAssertConfiguration(),
+        prefersPersistedData: Bool = TodoViewModel.defaultDebugPrefersPersistedData
+    ) {
+        let configuration: LaunchConfiguration
+
+        if let launchContent {
+            configuration = LaunchConfiguration(
+                content: launchContent,
+                isPersistenceEnabled: true
+            )
+        } else {
+            configuration = TodoViewModel.defaultLaunchConfiguration(
+                persistenceStore: persistenceStore,
+                isDebugBuild: isDebugBuild,
+                prefersPersistedData: prefersPersistedData
+            )
+        }
+
         self.init(
-            partitions: launchContent.partitions,
-            tasks: launchContent.tasks
+            partitions: configuration.content.partitions,
+            tasks: configuration.content.tasks,
+            tagHistoryByPartition: configuration.content.tagHistoryByPartition,
+            persistenceStore: persistenceStore,
+            isPersistenceEnabled: configuration.isPersistenceEnabled
         )
     }
 
-    static func defaultLaunchContent() -> LaunchContent {
-#if DEBUG
-        return .demo
-#else
-        return .empty
-#endif
+    static var defaultDebugPrefersPersistedData: Bool {
+        let environment = ProcessInfo.processInfo.environment["TODOAPP_USE_PERSISTED_DATA"] == "1"
+        let argument = ProcessInfo.processInfo.arguments.contains("--use-persisted-data")
+        return environment || argument
+    }
+
+    static func defaultLaunchConfiguration(
+        persistenceStore: TodoPersistenceStore? = TodoPersistenceStore(),
+        isDebugBuild: Bool = _isDebugAssertConfiguration(),
+        prefersPersistedData: Bool = defaultDebugPrefersPersistedData
+    ) -> LaunchConfiguration {
+        let shouldLoadPersistedState = !isDebugBuild || prefersPersistedData
+
+        if shouldLoadPersistedState, let persistenceStore {
+            do {
+                if let state = try persistenceStore.loadState() {
+                    return LaunchConfiguration(
+                        content: LaunchContent(
+                            partitions: state.partitions,
+                            tasks: state.tasks,
+                            tagHistoryByPartition: state.tagHistoryByPartition
+                        ),
+                        isPersistenceEnabled: true
+                    )
+                }
+            } catch {
+                NSLog("TodoApp failed to load persisted data: \(error.localizedDescription)")
+            }
+        }
+
+        return LaunchConfiguration(
+            content: fallbackLaunchContent(isDebugBuild: isDebugBuild),
+            isPersistenceEnabled: !isDebugBuild
+        )
+    }
+
+    static func defaultLaunchContent(
+        persistenceStore: TodoPersistenceStore? = TodoPersistenceStore(),
+        isDebugBuild: Bool = _isDebugAssertConfiguration(),
+        prefersPersistedData: Bool = defaultDebugPrefersPersistedData
+    ) -> LaunchContent {
+        defaultLaunchConfiguration(
+            persistenceStore: persistenceStore,
+            isDebugBuild: isDebugBuild,
+            prefersPersistedData: prefersPersistedData
+        ).content
+    }
+
+    static func fallbackLaunchContent(isDebugBuild: Bool) -> LaunchContent {
+        isDebugBuild ? .demo : .empty
     }
 
     // MARK: - Computed Properties
+
+    var shouldShowLaunchEmptyState: Bool {
+        partitions.isEmpty && tasks.isEmpty
+    }
 
     var completedTaskGroups: [CompletedTaskGroup] {
         rootTasks
@@ -191,152 +286,213 @@ class TodoViewModel {
     // MARK: - Task Actions
 
     func addTask(partitionId: String, name: String, tags: [String] = []) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        let normalizedTags = normalizeTags(tags)
-        let newTask = TodoTask(
-            partitionId: partitionId,
-            name: trimmed,
-            tags: normalizedTags
-        )
-        tasks.insert(newTask, at: 0)
-        rememberTags(normalizedTags, for: partitionId)
+        performStateMutation {
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return }
+            let normalizedTags = normalizeTags(tags)
+            let newTask = TodoTask(
+                partitionId: partitionId,
+                name: trimmed,
+                tags: normalizedTags
+            )
+            tasks.insert(newTask, at: 0)
+            rememberTags(normalizedTags, for: partitionId)
+        }
     }
 
     func addTask(partitionId: String, rawText: String) {
-        let parsed = TodoTask.parseDisplayText(rawText)
-        guard !parsed.name.isEmpty else { return }
-        let newTask = TodoTask(
-            partitionId: partitionId,
-            name: parsed.name,
-            tags: parsed.tags,
-            markupText: parsed.markupText
-        )
-        tasks.insert(newTask, at: 0)
-        rememberTags(parsed.tags, for: partitionId)
+        performStateMutation {
+            let parsed = TodoTask.parseDisplayText(rawText)
+            guard !parsed.name.isEmpty else { return }
+            let newTask = TodoTask(
+                partitionId: partitionId,
+                name: parsed.name,
+                tags: parsed.tags,
+                markupText: parsed.markupText
+            )
+            tasks.insert(newTask, at: 0)
+            rememberTags(parsed.tags, for: partitionId)
+        }
     }
 
     func addChildTask(parentTaskId: String, name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        guard let parent = task(withId: parentTaskId), parent.isRootTask else { return }
+        performStateMutation {
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return }
+            guard let parent = task(withId: parentTaskId), parent.isRootTask else { return }
 
-        let childTask = TodoTask(
-            partitionId: parent.partitionId,
-            name: trimmed,
-            parentTaskId: parentTaskId
-        )
-        tasks.insert(childTask, at: 0)
+            let childTask = TodoTask(
+                partitionId: parent.partitionId,
+                name: trimmed,
+                parentTaskId: parentTaskId
+            )
+            tasks.insert(childTask, at: 0)
+        }
     }
 
     func addChildTask(parentTaskId: String, rawText: String) {
-        let parsed = TodoTask.parseDisplayText(rawText)
-        guard !parsed.name.isEmpty else { return }
-        guard let parent = task(withId: parentTaskId), parent.isRootTask else { return }
+        performStateMutation {
+            let parsed = TodoTask.parseDisplayText(rawText)
+            guard !parsed.name.isEmpty else { return }
+            guard let parent = task(withId: parentTaskId), parent.isRootTask else { return }
 
-        let childTask = TodoTask(
-            partitionId: parent.partitionId,
-            name: parsed.name,
-            parentTaskId: parentTaskId,
-            tags: parsed.tags,
-            markupText: parsed.markupText
-        )
-        tasks.insert(childTask, at: 0)
-        rememberTags(parsed.tags, for: parent.partitionId)
+            let childTask = TodoTask(
+                partitionId: parent.partitionId,
+                name: parsed.name,
+                parentTaskId: parentTaskId,
+                tags: parsed.tags,
+                markupText: parsed.markupText
+            )
+            tasks.insert(childTask, at: 0)
+            rememberTags(parsed.tags, for: parent.partitionId)
+        }
     }
 
     func toggleComplete(_ taskId: String) {
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        let timestamp = Date()
+        performStateMutation {
+            guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+            let timestamp = Date()
 
-        if tasks[index].isRootTask {
-            if tasks[index].isCompleted {
-                tasks[index].isCompleted = false
-                tasks[index].completedAt = nil
-                for childIndex in childIndices(of: taskId) {
-                    tasks[childIndex].isCompleted = false
-                    tasks[childIndex].completedAt = nil
+            if tasks[index].isRootTask {
+                if tasks[index].isCompleted {
+                    tasks[index].isCompleted = false
+                    tasks[index].completedAt = nil
+                    for childIndex in childIndices(of: taskId) {
+                        tasks[childIndex].isCompleted = false
+                        tasks[childIndex].completedAt = nil
+                    }
+                    return
+                }
+
+                tasks[index].isCompleted = true
+                tasks[index].completedAt = timestamp
+
+                for childIndex in childIndices(of: taskId) where !tasks[childIndex].isCompleted {
+                    tasks[childIndex].isCompleted = true
+                    tasks[childIndex].completedAt = timestamp
                 }
                 return
             }
 
-            tasks[index].isCompleted = true
+            if tasks[index].isCompleted {
+                tasks[index].isCompleted = false
+                tasks[index].completedAt = nil
+
+                if let parentTaskId = tasks[index].parentTaskId,
+                   let parentIndex = tasks.firstIndex(where: { $0.id == parentTaskId }),
+                   tasks[parentIndex].isCompleted {
+                    tasks[parentIndex].isCompleted = false
+                    tasks[parentIndex].completedAt = nil
+                }
+                return
+            }
+
+            tasks[index].isCompleted.toggle()
             tasks[index].completedAt = timestamp
-
-            for childIndex in childIndices(of: taskId) where !tasks[childIndex].isCompleted {
-                tasks[childIndex].isCompleted = true
-                tasks[childIndex].completedAt = timestamp
-            }
-            return
         }
-
-        if tasks[index].isCompleted {
-            tasks[index].isCompleted = false
-            tasks[index].completedAt = nil
-
-            if let parentTaskId = tasks[index].parentTaskId,
-               let parentIndex = tasks.firstIndex(where: { $0.id == parentTaskId }),
-               tasks[parentIndex].isCompleted {
-                tasks[parentIndex].isCompleted = false
-                tasks[parentIndex].completedAt = nil
-            }
-            return
-        }
-
-        tasks[index].isCompleted.toggle()
-        tasks[index].completedAt = timestamp
     }
 
     func toggleStar(_ taskId: String) {
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        tasks[index].isStarred.toggle()
-        let timestamp = Date()
-        tasks[index].starredAt = tasks[index].isStarred ? timestamp : nil
-        tasks[index].unstarredAt = tasks[index].isStarred ? nil : timestamp
+        performStateMutation {
+            guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+            tasks[index].isStarred.toggle()
+            let timestamp = Date()
+            tasks[index].starredAt = tasks[index].isStarred ? timestamp : nil
+            tasks[index].unstarredAt = tasks[index].isStarred ? nil : timestamp
+        }
     }
 
     func setDueDate(_ taskId: String, date: Date?) {
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        tasks[index].dueDate = date
+        performStateMutation {
+            guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+            tasks[index].dueDate = date
+        }
     }
 
     func renameTask(_ taskId: String, name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        tasks[index].name = trimmed
+        performStateMutation {
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return }
+            guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+            tasks[index].name = trimmed
+        }
     }
 
     func updateTask(id: String, name: String, tags: [String]) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        performStateMutation {
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return }
+            guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
 
-        let normalizedTags = normalizeTags(tags)
-        tasks[index].name = trimmed
-        tasks[index].tags = normalizedTags
-        tasks[index].markupText = TodoTask(
-            partitionId: tasks[index].partitionId,
-            name: trimmed,
-            parentTaskId: tasks[index].parentTaskId,
-            tags: normalizedTags
-        ).markupText
-        rememberTags(normalizedTags, for: tasks[index].partitionId)
+            let normalizedTags = normalizeTags(tags)
+            tasks[index].name = trimmed
+            tasks[index].tags = normalizedTags
+            tasks[index].markupText = TodoTask(
+                partitionId: tasks[index].partitionId,
+                name: trimmed,
+                parentTaskId: tasks[index].parentTaskId,
+                tags: normalizedTags
+            ).markupText
+            rememberTags(normalizedTags, for: tasks[index].partitionId)
+        }
     }
 
     func updateTask(id: String, rawText: String) {
-        let parsed = TodoTask.parseDisplayText(rawText)
-        guard !parsed.name.isEmpty else { return }
-        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
-        tasks[index].name = parsed.name
-        tasks[index].tags = parsed.tags
-        tasks[index].markupText = parsed.markupText
-        rememberTags(parsed.tags, for: tasks[index].partitionId)
+        performStateMutation {
+            let parsed = TodoTask.parseDisplayText(rawText)
+            guard !parsed.name.isEmpty else { return }
+            guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+            tasks[index].name = parsed.name
+            tasks[index].tags = parsed.tags
+            tasks[index].markupText = parsed.markupText
+            rememberTags(parsed.tags, for: tasks[index].partitionId)
+        }
     }
 
     func updateRootTask(id: String, name: String, tags: [String]) {
         updateTask(id: id, name: name, tags: tags)
     }
+
+    func loadPersistedState() {
+        guard let persistenceStore else { return }
+
+        do {
+            let content: LaunchContent
+            if let state = try persistenceStore.loadState() {
+                content = LaunchContent(
+                    partitions: state.partitions,
+                    tasks: state.tasks,
+                    tagHistoryByPartition: state.tagHistoryByPartition
+                )
+            } else {
+                content = .empty
+            }
+
+            isPersistenceEnabled = true
+            applyLaunchContent(content)
+        } catch {
+            NSLog("TodoApp failed to reload persisted data: \(error.localizedDescription)")
+        }
+    }
+
+#if DEBUG
+    func loadDemoDataForDebug() {
+        isPersistenceEnabled = false
+        applyLaunchContent(.demo)
+    }
+
+    func clearPersistedStateForDebug() {
+        guard let persistenceStore else { return }
+
+        do {
+            try persistenceStore.deleteState()
+            isPersistenceEnabled = false
+            applyLaunchContent(.demo)
+        } catch {
+            NSLog("TodoApp failed to clear persisted data: \(error.localizedDescription)")
+        }
+    }
+#endif
 
     func tagHistory(for partitionId: String) -> [String] {
         tagHistoryByPartition[partitionId] ?? []
@@ -345,37 +501,50 @@ class TodoViewModel {
     // MARK: - Partition Actions
 
     func addPartition() {
-        let newPartition = Partition(name: "", color: .blue, height: 200)
-        partitions.insert(newPartition, at: 0)
-        editingPartitionId = newPartition.id
+        performStateMutation {
+            let newPartition = Partition(name: "", color: .blue, height: 200)
+            partitions.insert(newPartition, at: 0)
+            editingPartitionId = newPartition.id
+        }
     }
 
     func savePartitionEdit(id: String, name: String) {
-        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
-        partitions[index].name = name.isEmpty ? "Untitled" : name
-        editingPartitionId = nil
+        performStateMutation {
+            guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+            partitions[index].name = name.isEmpty ? "Untitled" : name
+            editingPartitionId = nil
+        }
     }
 
     func deletePartition(_ id: String) {
-        partitions.removeAll { $0.id == id }
-        tasks.removeAll { $0.partitionId == id }
+        performStateMutation {
+            partitions.removeAll { $0.id == id }
+            tasks.removeAll { $0.partitionId == id }
+            tagHistoryByPartition[id] = nil
+        }
     }
 
     func reorderPartitions(_ newPartitions: [Partition]) {
-        partitions = newPartitions
+        performStateMutation {
+            partitions = newPartitions
+        }
     }
 
     func updatePartitionHeight(_ id: String, height: CGFloat) {
-        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
-        partitions[index].height = max(DesignTokens.Size.partitionMinHeight, height)
+        performStateMutation {
+            guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+            partitions[index].height = max(DesignTokens.Size.partitionMinHeight, height)
+        }
     }
 
     func adjustPartitionHeight(_ id: String, delta: CGFloat) {
-        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
-        partitions[index].height = max(
-            DesignTokens.Size.partitionMinHeight,
-            partitions[index].height + delta
-        )
+        performStateMutation {
+            guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+            partitions[index].height = max(
+                DesignTokens.Size.partitionMinHeight,
+                partitions[index].height + delta
+            )
+        }
     }
 
     func resizeBoundary(
@@ -383,44 +552,46 @@ class TodoViewModel {
         delta: CGFloat,
         maxTotalPartitionHeights: CGFloat
     ) {
-        guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
-        let minHeight = DesignTokens.Size.partitionMinHeight
+        performStateMutation {
+            guard let index = partitions.firstIndex(where: { $0.id == id }) else { return }
+            let minHeight = DesignTokens.Size.partitionMinHeight
 
-        if index < partitions.count - 1 {
-            let currentHeight = partitions[index].height
-            let nextHeight = partitions[index + 1].height
-            let maxShrinkCurrent = currentHeight - minHeight
+            if index < partitions.count - 1 {
+                let currentHeight = partitions[index].height
+                let nextHeight = partitions[index + 1].height
+                let maxShrinkCurrent = currentHeight - minHeight
 
-            if delta < 0 {
-                let clampedDelta = max(delta, -maxShrinkCurrent)
+                if delta < 0 {
+                    let clampedDelta = max(delta, -maxShrinkCurrent)
+                    partitions[index].height = currentHeight + clampedDelta
+                    partitions[index + 1].height = nextHeight - clampedDelta
+                    return
+                }
+
+                let nextShrinkBudget = max(0, nextHeight - minHeight)
+                let totalHeights = partitions.reduce(CGFloat.zero) { partialResult, partition in
+                    partialResult + partition.height
+                }
+                let completedShrinkBudget = max(0, maxTotalPartitionHeights - totalHeights)
+                let allowedGrowth = nextShrinkBudget + completedShrinkBudget
+                let clampedDelta = min(delta, allowedGrowth)
+                let consumedFromNext = min(clampedDelta, nextShrinkBudget)
+
                 partitions[index].height = currentHeight + clampedDelta
-                partitions[index + 1].height = nextHeight - clampedDelta
+                partitions[index + 1].height = nextHeight - consumedFromNext
                 return
             }
 
-            let nextShrinkBudget = max(0, nextHeight - minHeight)
+            let currentHeight = partitions[index].height
             let totalHeights = partitions.reduce(CGFloat.zero) { partialResult, partition in
                 partialResult + partition.height
             }
-            let completedShrinkBudget = max(0, maxTotalPartitionHeights - totalHeights)
-            let allowedGrowth = nextShrinkBudget + completedShrinkBudget
-            let clampedDelta = min(delta, allowedGrowth)
-            let consumedFromNext = min(clampedDelta, nextShrinkBudget)
+            let remainingGrowBudget = max(0, maxTotalPartitionHeights - totalHeights)
+            let maxShrink = currentHeight - minHeight
+            let clampedDelta = min(max(delta, -maxShrink), remainingGrowBudget)
 
             partitions[index].height = currentHeight + clampedDelta
-            partitions[index + 1].height = nextHeight - consumedFromNext
-            return
         }
-
-        let currentHeight = partitions[index].height
-        let totalHeights = partitions.reduce(CGFloat.zero) { partialResult, partition in
-            partialResult + partition.height
-        }
-        let remainingGrowBudget = max(0, maxTotalPartitionHeights - totalHeights)
-        let maxShrink = currentHeight - minHeight
-        let clampedDelta = min(max(delta, -maxShrink), remainingGrowBudget)
-
-        partitions[index].height = currentHeight + clampedDelta
     }
 
     // MARK: - Helpers
@@ -453,6 +624,57 @@ class TodoViewModel {
 
     private func normalizeTags(_ tags: [String]) -> [String] {
         TodoTask.normalizeTags(tags)
+    }
+
+    private func stateDidChange() {
+        guard persistenceStore != nil, isPersistenceEnabled else { return }
+
+        if persistenceMutationDepth > 0 {
+            hasPendingPersistence = true
+            return
+        }
+
+        persistState()
+    }
+
+    private func performStateMutation(_ updates: () -> Void) {
+        persistenceMutationDepth += 1
+        updates()
+        persistenceMutationDepth -= 1
+
+        if persistenceMutationDepth == 0, hasPendingPersistence {
+            persistState()
+        }
+    }
+
+    private func persistState() {
+        guard let persistenceStore, isPersistenceEnabled else { return }
+
+        hasPendingPersistence = false
+
+        let state = TodoPersistedState(
+            partitions: partitions,
+            tasks: tasks,
+            tagHistoryByPartition: tagHistoryByPartition
+        )
+
+        do {
+            try persistenceStore.saveState(state)
+        } catch {
+            NSLog("TodoApp failed to persist data: \(error.localizedDescription)")
+        }
+    }
+
+    private func applyLaunchContent(_ content: LaunchContent) {
+        performStateMutation {
+            editingPartitionId = nil
+            partitions = content.partitions
+            tasks = content.tasks
+            tagHistoryByPartition = TodoViewModel.buildTagHistory(
+                tasks: content.tasks,
+                seed: content.tagHistoryByPartition
+            )
+        }
     }
 
     private func activeTaskSort(_ lhs: TodoTask, _ rhs: TodoTask) -> Bool {

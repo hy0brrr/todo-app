@@ -10,54 +10,62 @@ struct ContentView: View {
         ZStack {
             backgroundView
 
-            GeometryReader { geometry in
-                let topInset = DesignTokens.Spacing.screenTopInset
-                let bottomInset = DesignTokens.Spacing.screenVerticalInset
-                let totalHandleHeight = CGFloat(viewModel.partitions.count) * DesignTokens.Spacing.cardGap
-                let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
-                let minimumPartitionStackHeight = CGFloat(viewModel.partitions.count)
-                    * DesignTokens.Size.partitionMinHeight
-                    + totalHandleHeight
-                let maxTotalPartitionHeights = max(
-                    0,
-                    contentHeight
-                        - DesignTokens.Size.completedMinHeight
-                        - totalHandleHeight
-                )
-                let partitionStackHeight = totalPartitionHeight
-                let completedHeight = max(
-                    DesignTokens.Size.completedMinHeight,
-                    contentHeight - partitionStackHeight
-                )
-                let partitionsAreaHeight = max(0, contentHeight - completedHeight)
-                let shouldScrollPartitions = minimumPartitionStackHeight > partitionsAreaHeight
-
-                VStack(spacing: 0) {
-                    partitionStack(maxTotalPartitionHeights: maxTotalPartitionHeights)
-                        .frame(maxWidth: .infinity)
-                        .modifier(
-                            PartitionAreaScrollModifier(
-                                isScrollable: shouldScrollPartitions
-                            )
-                        )
-                        .frame(height: partitionsAreaHeight)
-
-                    CompletedSectionView(
-                        groups: viewModel.completedTaskGroups,
-                        onSaveTask: { id, rawText in
-                            viewModel.updateTask(id: id, rawText: rawText)
-                        },
-                        onAddChildTask: { parentId, name in
-                            viewModel.addChildTask(parentTaskId: parentId, rawText: name)
-                        },
-                        onToggleComplete: { viewModel.toggleComplete($0) }
-                    )
-                    .frame(height: completedHeight)
+            if viewModel.shouldShowLaunchEmptyState {
+                LaunchEmptyStateView {
+                    viewModel.addPartition()
                 }
                 .padding(.horizontal, DesignTokens.Spacing.screenHorizontalInset)
-                .padding(.top, topInset)
-                .padding(.bottom, bottomInset)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.vertical, DesignTokens.Spacing.screenVerticalInset)
+            } else {
+                GeometryReader { geometry in
+                    let topInset = DesignTokens.Spacing.screenTopInset
+                    let bottomInset = DesignTokens.Spacing.screenVerticalInset
+                    let totalHandleHeight = CGFloat(viewModel.partitions.count) * DesignTokens.Spacing.cardGap
+                    let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
+                    let minimumPartitionStackHeight = CGFloat(viewModel.partitions.count)
+                        * DesignTokens.Size.partitionMinHeight
+                        + totalHandleHeight
+                    let maxTotalPartitionHeights = max(
+                        0,
+                        contentHeight
+                            - DesignTokens.Size.completedMinHeight
+                            - totalHandleHeight
+                    )
+                    let partitionStackHeight = totalPartitionHeight
+                    let completedHeight = max(
+                        DesignTokens.Size.completedMinHeight,
+                        contentHeight - partitionStackHeight
+                    )
+                    let partitionsAreaHeight = max(0, contentHeight - completedHeight)
+                    let shouldScrollPartitions = minimumPartitionStackHeight > partitionsAreaHeight
+
+                    VStack(spacing: 0) {
+                        partitionStack(maxTotalPartitionHeights: maxTotalPartitionHeights)
+                            .frame(maxWidth: .infinity)
+                            .modifier(
+                                PartitionAreaScrollModifier(
+                                    isScrollable: shouldScrollPartitions
+                                )
+                            )
+                            .frame(height: partitionsAreaHeight)
+
+                        CompletedSectionView(
+                            groups: viewModel.completedTaskGroups,
+                            onSaveTask: { id, rawText in
+                                viewModel.updateTask(id: id, rawText: rawText)
+                            },
+                            onAddChildTask: { parentId, name in
+                                viewModel.addChildTask(parentTaskId: parentId, rawText: name)
+                            },
+                            onToggleComplete: { viewModel.toggleComplete($0) }
+                        )
+                        .frame(height: completedHeight)
+                    }
+                    .padding(.horizontal, DesignTokens.Spacing.screenHorizontalInset)
+                    .padding(.top, topInset)
+                    .padding(.bottom, bottomInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
             }
         }
         .font(DesignTokens.Typography.body)
@@ -166,6 +174,88 @@ struct ContentView: View {
                 .frame(height: DesignTokens.Spacing.cardGap)
             }
         }
+    }
+}
+
+private struct LaunchEmptyStateView: View {
+    let onCreatePartition: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.5))
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(DesignTokens.ColorRole.primaryText.opacity(0.88))
+                }
+
+                VStack(spacing: 8) {
+                    Text("Start with your first partition")
+                        .font(DesignTokens.Typography.screenSubtitle)
+                        .foregroundStyle(DesignTokens.ColorRole.primaryText)
+
+                    Text("Sidebar Todo is ready. Create a partition like Work or Life, then start adding tasks, subtasks, tags, and due dates. Your data now lives in Application Support, so replacing the app won't clear your list.")
+                        .font(DesignTokens.Typography.body)
+                        .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+                }
+            }
+
+            Button(action: onCreatePartition) {
+                Text("Create First Partition")
+                    .font(DesignTokens.Typography.bodyMedium)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(DesignTokens.ColorRole.primaryText)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(emptyStateCard)
+    }
+
+    private var emptyStateCard: some View {
+        let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+
+        return ZStack {
+            if #available(macOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular, in: shape)
+                    .environment(\.appearsActive, true)
+
+                shape
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            } else {
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                DesignTokens.ColorRole.cardBackgroundTop,
+                                DesignTokens.ColorRole.cardBackgroundBottom
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                shape
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+            }
+        }
+        .shadow(
+            color: .black.opacity(DesignTokens.Shadow.cardOpacity),
+            radius: DesignTokens.Shadow.cardRadius,
+            y: DesignTokens.Shadow.cardYOffset
+        )
     }
 }
 

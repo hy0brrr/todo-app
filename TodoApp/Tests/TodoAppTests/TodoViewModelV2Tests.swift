@@ -7,6 +7,7 @@ final class TodoViewModelV2Tests: XCTestCase {
 
         XCTAssertEqual(content.partitions.map(\.name), ["Work", "Life"])
         XCTAssertFalse(content.tasks.isEmpty)
+        XCTAssertEqual(content.tagHistoryByPartition["p1"], ["Strategy", "Q2", "Planning", "Design", "Weekly"])
     }
 
     func testEmptyLaunchContentStartsWithoutDemoData() {
@@ -14,6 +15,166 @@ final class TodoViewModelV2Tests: XCTestCase {
 
         XCTAssertTrue(content.partitions.isEmpty)
         XCTAssertTrue(content.tasks.isEmpty)
+        XCTAssertTrue(content.tagHistoryByPartition.isEmpty)
+    }
+
+    func testFallbackLaunchContentMatchesBuildFlavor() {
+        let debugContent = TodoViewModel.fallbackLaunchContent(isDebugBuild: true)
+        let releaseContent = TodoViewModel.fallbackLaunchContent(isDebugBuild: false)
+
+        XCTAssertEqual(debugContent.partitions.map(\.name), ["Work", "Life"])
+        XCTAssertFalse(debugContent.tasks.isEmpty)
+        XCTAssertEqual(releaseContent, .empty)
+    }
+
+    func testDebugLaunchConfigurationDefaultsToDemoWithoutPersistence() throws {
+        let store = try makePersistenceStore()
+        try store.saveState(
+            TodoPersistedState(
+                partitions: [Partition(id: "saved", name: "Saved", color: .orange, height: 240)],
+                tasks: [TodoTask(id: "saved-task", partitionId: "saved", name: "Persisted task")],
+                tagHistoryByPartition: ["saved": ["saved"]]
+            )
+        )
+
+        let configuration = TodoViewModel.defaultLaunchConfiguration(
+            persistenceStore: store,
+            isDebugBuild: true,
+            prefersPersistedData: false
+        )
+
+        XCTAssertEqual(configuration.content.partitions.map(\.name), ["Work", "Life"])
+        XCTAssertFalse(configuration.content.tasks.isEmpty)
+        XCTAssertFalse(configuration.isPersistenceEnabled)
+    }
+
+    func testDefaultLaunchContentUsesPersistedStateBeforeFallback() throws {
+        let store = try makePersistenceStore()
+        let expectedState = TodoPersistedState(
+            partitions: [Partition(id: "saved", name: "Saved", color: .orange, height: 240)],
+            tasks: [
+                TodoTask(
+                    id: "saved-task",
+                    partitionId: "saved",
+                    name: "Persisted task",
+                    parentTaskId: nil,
+                    tags: ["saved"],
+                    markupText: "Persisted task [saved]",
+                    isCompleted: true,
+                    isStarred: true,
+                    starredAt: Date(timeIntervalSince1970: 10),
+                    unstarredAt: nil,
+                    dueDate: Date(timeIntervalSince1970: 20),
+                    createdAt: Date(timeIntervalSince1970: 5),
+                    completedAt: Date(timeIntervalSince1970: 30)
+                )
+            ],
+            tagHistoryByPartition: ["saved": ["saved", "archive"]]
+        )
+        try store.saveState(expectedState)
+
+        let content = TodoViewModel.defaultLaunchContent(
+            persistenceStore: store,
+            isDebugBuild: true,
+            prefersPersistedData: true
+        )
+
+        XCTAssertEqual(content.partitions, expectedState.partitions)
+        XCTAssertEqual(content.tasks, expectedState.tasks)
+        XCTAssertEqual(content.tagHistoryByPartition, expectedState.tagHistoryByPartition)
+    }
+
+    func testReleaseLaunchConfigurationUsesPersistedStateAndEnablesPersistence() throws {
+        let store = try makePersistenceStore()
+        try store.saveState(
+            TodoPersistedState(
+                partitions: [Partition(id: "saved", name: "Saved", color: .orange, height: 240)],
+                tasks: [TodoTask(id: "saved-task", partitionId: "saved", name: "Persisted task")],
+                tagHistoryByPartition: ["saved": ["saved"]]
+            )
+        )
+
+        let configuration = TodoViewModel.defaultLaunchConfiguration(
+            persistenceStore: store,
+            isDebugBuild: false,
+            prefersPersistedData: false
+        )
+
+        XCTAssertEqual(configuration.content.partitions.map(\.id), ["saved"])
+        XCTAssertTrue(configuration.isPersistenceEnabled)
+    }
+
+    func testViewModelPersistsStateAfterMutations() throws {
+        let store = try makePersistenceStore()
+        let viewModel = TodoViewModel(
+            partitions: [],
+            tasks: [],
+            persistenceStore: store
+        )
+
+        viewModel.addPartition()
+        let partitionId = try XCTUnwrap(viewModel.partitions.first?.id)
+        viewModel.savePartitionEdit(id: partitionId, name: "Inbox")
+        viewModel.addTask(partitionId: partitionId, rawText: "Ship V2 [release] [macOS]")
+
+        let persistedState = try XCTUnwrap(store.loadState())
+        XCTAssertEqual(persistedState.partitions.map(\.name), ["Inbox"])
+        XCTAssertEqual(persistedState.tasks.count, 1)
+        XCTAssertEqual(persistedState.tasks[0].tags, ["release", "macOS"])
+        XCTAssertEqual(persistedState.tagHistoryByPartition[partitionId], ["release", "macOS"])
+    }
+
+    func testDebugDemoSessionDoesNotOverwritePersistedUserData() throws {
+        let store = try makePersistenceStore()
+        let originalState = TodoPersistedState(
+            partitions: [Partition(id: "saved", name: "Saved", color: .orange, height: 240)],
+            tasks: [TodoTask(id: "saved-task", partitionId: "saved", name: "Persisted task")],
+            tagHistoryByPartition: ["saved": ["saved"]]
+        )
+        try store.saveState(originalState)
+
+        let viewModel = TodoViewModel(
+            partitions: TodoViewModel.LaunchContent.demo.partitions,
+            tasks: TodoViewModel.LaunchContent.demo.tasks,
+            tagHistoryByPartition: TodoViewModel.LaunchContent.demo.tagHistoryByPartition,
+            persistenceStore: store,
+            isPersistenceEnabled: false
+        )
+
+        viewModel.addPartition()
+        viewModel.addTask(partitionId: viewModel.partitions[0].id, name: "Temporary debug task")
+
+        let persistedState = try XCTUnwrap(store.loadState())
+        XCTAssertEqual(persistedState.partitions, originalState.partitions)
+        XCTAssertEqual(persistedState.tagHistoryByPartition, originalState.tagHistoryByPartition)
+        XCTAssertEqual(persistedState.tasks.map(\.id), originalState.tasks.map(\.id))
+        XCTAssertEqual(persistedState.tasks.map(\.name), originalState.tasks.map(\.name))
+    }
+
+    func testDeletingPartitionRemovesPersistedTasksAndTagHistory() throws {
+        let store = try makePersistenceStore()
+        let viewModel = TodoViewModel(
+            partitions: [
+                Partition(id: "work", name: "Work", color: .blue, height: 200),
+                Partition(id: "life", name: "Life", color: .green, height: 200)
+            ],
+            tasks: [
+                TodoTask(id: "task-1", partitionId: "work", name: "Task", tags: ["focus"])
+            ],
+            tagHistoryByPartition: [
+                "work": ["focus"],
+                "life": ["home"]
+            ],
+            persistenceStore: store
+        )
+
+        viewModel.deletePartition("work")
+
+        let persistedState = try XCTUnwrap(store.loadState())
+        XCTAssertEqual(persistedState.partitions.map(\.id), ["life"])
+        XCTAssertTrue(persistedState.tasks.isEmpty)
+        XCTAssertNil(persistedState.tagHistoryByPartition["work"])
+        XCTAssertEqual(persistedState.tagHistoryByPartition["life"], ["home"])
     }
 
     func testBracketSyntaxParsesNameAndTags() {
@@ -370,5 +531,16 @@ final class TodoViewModelV2Tests: XCTestCase {
                 TodoTask(id: "root-life", partitionId: "life", name: "Life root")
             ]
         )
+    }
+
+    private func makePersistenceStore() throws -> TodoPersistenceStore {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+        return TodoPersistenceStore(fileURL: directory.appendingPathComponent("todo-data.json"))
     }
 }

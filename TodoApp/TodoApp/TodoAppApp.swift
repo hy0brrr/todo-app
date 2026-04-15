@@ -1,8 +1,11 @@
 import SwiftUI
+import AppKit
 
 @main
 struct TodoAppApp: App {
     @State private var viewModel = TodoViewModel()
+
+    private let releasesURL = URL(string: "https://github.com/hy0brrr/todo-app/releases")!
 
     var body: some Scene {
         WindowGroup {
@@ -29,7 +32,11 @@ struct TodoAppApp: App {
             CommandGroup(replacing: .singleWindowList) { }
 
             // Remove Help menu
-            CommandGroup(replacing: .help) { }
+            CommandGroup(replacing: .help) {
+                Button("Check for Updates...") {
+                    NSWorkspace.shared.open(releasesURL)
+                }
+            }
 
             // Custom Partition menu
             CommandMenu("Partition") {
@@ -44,7 +51,25 @@ struct TodoAppApp: App {
                     viewModel.showManagePartitions = true
                 }
             }
-
         }
+#if DEBUG
+        .commands {
+            CommandMenu("Debug Data") {
+                Button("Use Demo Data") {
+                    viewModel.loadDemoDataForDebug()
+                }
+
+                Button("Use Local Data") {
+                    viewModel.loadPersistedState()
+                }
+
+                Divider()
+
+                Button("Clear Local Data") {
+                    viewModel.clearPersistedStateForDebug()
+                }
+            }
+        }
+#endif
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-struct Partition: Identifiable, Equatable {
+struct Partition: Identifiable, Equatable, Codable {
     let id: String
     var name: String
     var color: PartitionColor
@@ -15,7 +15,7 @@ struct Partition: Identifiable, Equatable {
     }
 }
 
-enum PartitionColor: String, CaseIterable, Equatable {
+enum PartitionColor: String, CaseIterable, Equatable, Codable {
     case blue, green, red, yellow, purple, orange
 
     var displayName: String {

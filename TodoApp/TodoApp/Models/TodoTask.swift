@@ -11,7 +11,7 @@ struct ParsedTaskText: Equatable {
     let markupText: String
 }
 
-struct TodoTask: Identifiable, Equatable {
+struct TodoTask: Identifiable, Equatable, Codable {
     let id: String
     var partitionId: String
     var name: String
