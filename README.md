@@ -1,4 +1,4 @@
-# Sidebar Todo for macOS
+# tidy
 
 A native macOS todo app built with SwiftUI.
 
@@ -27,6 +27,18 @@ Main additions in V2:
 
 - [MVP](https://github.com/hy0brrr/todo-app/releases/tag/v1.0.0-mvp)
 - [V2](https://github.com/hy0brrr/todo-app/releases/tag/v2.0.0)
+
+## Packaging
+
+Build the release DMG with:
+
+```bash
+./scripts/build-dmg.sh
+```
+
+The script produces `dist/tidy-macOS-v<version>.dmg`, mounts as `tidy`, and configures a standard drag-to-Applications Finder layout.
+
+More packaging details live in [docs/release/dmg-packaging.md](/Users/huanyun.wang/Desktop/Git/todo-app/docs/release/dmg-packaging.md).
 
 ## Notes
 

@@ -1,4 +1,6 @@
 .DS_Store
+.build-xcode/
+.build-dmg-xcode/
 TodoApp/.build/
 TodoApp/.build-xcode/
 TodoApp/.build-release/
