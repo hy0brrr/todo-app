@@ -24,51 +24,46 @@ struct CompletedSectionView: View {
             .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
 
             // Completed tasks list
-            ScrollView {
-                VStack(spacing: 0) {
-                    LazyVStack(spacing: 6) {
-                        ForEach(groups) { group in
-                            VStack(spacing: 0) {
-                                TaskItemView(
-                                    task: group.rootTask,
-                                    depth: 0,
-                                    renderMode: .completed,
-                                    allowsCompletionToggle: group.allowsRootCompletionToggle,
-                                    onSaveTask: onSaveTask,
-                                    onBeginAddChildTask: { _ in },
-                                    onToggleComplete: onToggleComplete,
-                                    onToggleStar: { _ in },
-                                    onSetDueDate: { _, _ in }
-                                )
-
-                                ForEach(group.completedChildren) { child in
+            if groups.isEmpty {
+                EmptyTodoPlaceholderView()
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        LazyVStack(spacing: 6) {
+                            ForEach(groups) { group in
+                                VStack(spacing: 0) {
                                     TaskItemView(
-                                        task: child,
-                                        depth: 1,
+                                        task: group.rootTask,
+                                        depth: 0,
                                         renderMode: .completed,
-                                        allowsCompletionToggle: true,
+                                        allowsCompletionToggle: group.allowsRootCompletionToggle,
                                         onSaveTask: onSaveTask,
                                         onBeginAddChildTask: { _ in },
                                         onToggleComplete: onToggleComplete,
                                         onToggleStar: { _ in },
                                         onSetDueDate: { _, _ in }
                                     )
+
+                                    ForEach(group.completedChildren) { child in
+                                        TaskItemView(
+                                            task: child,
+                                            depth: 1,
+                                            renderMode: .completed,
+                                            allowsCompletionToggle: true,
+                                            onSaveTask: onSaveTask,
+                                            onBeginAddChildTask: { _ in },
+                                            onToggleComplete: onToggleComplete,
+                                            onToggleStar: { _ in },
+                                            onSetDueDate: { _, _ in }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-
-                    if groups.isEmpty {
-                        Text("No completed tasks.")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                            .italic()
-                            .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
-                            .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
-                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.top, DesignTokens.Spacing.sectionBodyTop)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.top, DesignTokens.Spacing.sectionBodyTop)
             }
         }
         .background(cardBackground)

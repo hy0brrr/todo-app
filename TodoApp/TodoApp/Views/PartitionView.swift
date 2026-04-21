@@ -1,6 +1,53 @@
 import SwiftUI
 import AppKit
 
+enum EmptyTodoPlaceholderLayout {
+    static let fixedArtworkSide: CGFloat = 80
+
+    static func imageSide(for _: CGSize) -> CGFloat {
+        fixedArtworkSide
+    }
+}
+
+struct EmptyTodoPlaceholderView: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let imageSide = EmptyTodoPlaceholderLayout.imageSide(for: geometry.size)
+
+            if imageSide > 0 {
+                EmptyTodoIllustration()
+                    .frame(width: imageSide, height: imageSide)
+                    .position(
+                        x: geometry.size.width / 2,
+                        y: geometry.size.height / 2
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct EmptyTodoIllustration: View {
+    private static let image: NSImage? = {
+        guard let url = Bundle.main.url(forResource: "empty-todo", withExtension: "svg") else {
+            return nil
+        }
+
+        return NSImage(contentsOf: url)
+    }()
+
+    var body: some View {
+        Group {
+            if let image = Self.image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+    }
+}
+
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard let editor = currentEditor() else {
@@ -199,58 +246,53 @@ struct PartitionView: View {
             partitionHeader
 
             // Task list
-            ScrollView {
-                VStack(spacing: 0) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(taskGroups) { group in
-                            let childRows = ChildTaskOrdering.orderedRows(
-                                for: group.children,
-                                parentTaskId: group.rootTask.id,
-                                showInlineDraft: childDraftParentTaskId == group.rootTask.id
-                            )
+            if taskGroups.isEmpty {
+                EmptyTodoPlaceholderView()
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(taskGroups) { group in
+                                let childRows = ChildTaskOrdering.orderedRows(
+                                    for: group.children,
+                                    parentTaskId: group.rootTask.id,
+                                    showInlineDraft: childDraftParentTaskId == group.rootTask.id
+                                )
 
-                            TaskItemView(
-                                task: group.rootTask,
-                                depth: 0,
-                                renderMode: .active,
-                                onSaveTask: onSaveTask,
-                                onBeginAddChildTask: beginInlineChildTaskCreation,
-                                onToggleComplete: onToggleComplete,
-                                onToggleStar: onToggleStar,
-                                onSetDueDate: onSetDueDate
-                            )
+                                TaskItemView(
+                                    task: group.rootTask,
+                                    depth: 0,
+                                    renderMode: .active,
+                                    onSaveTask: onSaveTask,
+                                    onBeginAddChildTask: beginInlineChildTaskCreation,
+                                    onToggleComplete: onToggleComplete,
+                                    onToggleStar: onToggleStar,
+                                    onSetDueDate: onSetDueDate
+                                )
 
-                            ForEach(childRows) { row in
-                                switch row {
-                                case .child(let child):
-                                    TaskItemView(
-                                        task: child,
-                                        depth: 1,
-                                        renderMode: .active,
-                                        onSaveTask: onSaveTask,
-                                        onBeginAddChildTask: beginInlineChildTaskCreation,
-                                        onToggleComplete: onToggleComplete,
-                                        onToggleStar: onToggleStar,
-                                        onSetDueDate: onSetDueDate
-                                    )
-                                case .inlineDraft(let parentTaskId):
-                                    inlineChildDraftRow(parentTaskId: parentTaskId)
+                                ForEach(childRows) { row in
+                                    switch row {
+                                    case .child(let child):
+                                        TaskItemView(
+                                            task: child,
+                                            depth: 1,
+                                            renderMode: .active,
+                                            onSaveTask: onSaveTask,
+                                            onBeginAddChildTask: beginInlineChildTaskCreation,
+                                            onToggleComplete: onToggleComplete,
+                                            onToggleStar: onToggleStar,
+                                            onSetDueDate: onSetDueDate
+                                        )
+                                    case .inlineDraft(let parentTaskId):
+                                        inlineChildDraftRow(parentTaskId: parentTaskId)
+                                    }
                                 }
                             }
                         }
                     }
-
-                    if taskGroups.isEmpty {
-                        Text("No tasks yet.")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                            .italic()
-                            .padding(.horizontal, DesignTokens.Spacing.listEmptyHorizontal)
-                            .padding(.vertical, DesignTokens.Spacing.listEmptyVertical)
-                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.top, DesignTokens.Spacing.sectionBodyTop)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.top, DesignTokens.Spacing.sectionBodyTop)
             }
 
             Divider().opacity(DesignTokens.Stroke.dividerOpacity)

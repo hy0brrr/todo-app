@@ -9,7 +9,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "TodoApp",
-            path: "TodoApp"
+            path: "TodoApp",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "TodoAppTests",

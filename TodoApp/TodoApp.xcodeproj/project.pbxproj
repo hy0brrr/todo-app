@@ -26,6 +26,7 @@
 		A1000011 /* EditingLayerInteractivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* EditingLayerInteractivity.swift */; };
 		A1000012 /* ChildTaskOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* ChildTaskOrdering.swift */; };
 		A1000013 /* TodoPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* TodoPersistenceStore.swift */; };
+		A1000014 /* empty-todo.svg in Resources */ = {isa = PBXBuildFile; fileRef = B1000014 /* empty-todo.svg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		B1000011 /* EditingLayerInteractivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingLayerInteractivity.swift; sourceTree = "<group>"; };
 		B1000012 /* ChildTaskOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildTaskOrdering.swift; sourceTree = "<group>"; };
 		B1000013 /* TodoPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoPersistenceStore.swift; sourceTree = "<group>"; };
+		B1000014 /* empty-todo.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "empty-todo.svg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +80,7 @@
 				E1000004 /* ViewModels */,
 				E1000005 /* Views */,
 				E1000007 /* Helpers */,
+				E1000008 /* Resources */,
 			);
 			path = TodoApp;
 			sourceTree = "<group>";
@@ -136,6 +139,14 @@
 			path = Helpers;
 			sourceTree = "<group>";
 		};
+		E1000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1000014 /* empty-todo.svg */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -145,6 +156,7 @@
 			buildPhases = (
 				F3000001 /* Sources */,
 				D1000001 /* Frameworks */,
+				F3000002 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -182,6 +194,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F3000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000014 /* empty-todo.svg in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		F3000001 /* Sources */ = {
