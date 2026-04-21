@@ -45,14 +45,25 @@ struct ManagePartitionsView: View {
                         Spacer()
 
                         Button {
+                            guard canDeletePartitions else { return }
                             partitionToDelete = partition
                             showDeleteConfirmation = true
                         } label: {
                             Image(systemName: "trash")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundStyle(DesignTokens.ColorRole.secondaryText)
+                                .foregroundStyle(
+                                    canDeletePartitions
+                                        ? DesignTokens.ColorRole.secondaryText
+                                        : DesignTokens.ColorRole.tertiaryText
+                                )
                         }
                         .buttonStyle(.plain)
+                        .disabled(!canDeletePartitions)
+                        .help(
+                            canDeletePartitions
+                                ? "Delete partition"
+                                : "At least one partition is required"
+                        )
                     }
                     .padding(.vertical, DesignTokens.Spacing.modalListRowVertical)
                 }
@@ -98,5 +109,9 @@ struct ManagePartitionsView: View {
         } message: { partition in
             Text("Are you sure you want to delete \"\(partition.name.isEmpty ? "Untitled" : partition.name)\"? All tasks inside this partition will also be deleted. This action cannot be undone.")
         }
+    }
+
+    private var canDeletePartitions: Bool {
+        partitions.count > 1
     }
 }

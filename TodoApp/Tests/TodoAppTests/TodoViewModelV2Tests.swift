@@ -10,10 +10,11 @@ final class TodoViewModelV2Tests: XCTestCase {
         XCTAssertEqual(content.tagHistoryByPartition["p1"], ["Strategy", "Q2", "Planning", "Design", "Weekly"])
     }
 
-    func testEmptyLaunchContentStartsWithoutDemoData() {
+    func testEmptyLaunchContentStartsWithDefaultWorkPartitionAndNoTasks() {
         let content = TodoViewModel.LaunchContent.empty
 
-        XCTAssertTrue(content.partitions.isEmpty)
+        XCTAssertEqual(content.partitions.map(\.id), ["work"])
+        XCTAssertEqual(content.partitions.map(\.name), ["Work"])
         XCTAssertTrue(content.tasks.isEmpty)
         XCTAssertTrue(content.tagHistoryByPartition.isEmpty)
     }
@@ -175,6 +176,22 @@ final class TodoViewModelV2Tests: XCTestCase {
         XCTAssertTrue(persistedState.tasks.isEmpty)
         XCTAssertNil(persistedState.tagHistoryByPartition["work"])
         XCTAssertEqual(persistedState.tagHistoryByPartition["life"], ["home"])
+    }
+
+    func testDeletingOnlyRemainingPartitionIsIgnored() {
+        let viewModel = TodoViewModel(
+            partitions: [
+                Partition(id: "work", name: "work", color: .blue, height: 200)
+            ],
+            tasks: [
+                TodoTask(id: "root-work", partitionId: "work", name: "Work root")
+            ]
+        )
+
+        viewModel.deletePartition("work")
+
+        XCTAssertEqual(viewModel.partitions.map(\.id), ["work"])
+        XCTAssertEqual(viewModel.tasks.map(\.id), ["root-work"])
     }
 
     func testBracketSyntaxParsesNameAndTags() {

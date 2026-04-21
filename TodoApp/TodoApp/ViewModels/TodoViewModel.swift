@@ -76,7 +76,11 @@ class TodoViewModel {
         let tagHistoryByPartition: [String: [String]]
 
         static var empty: LaunchContent {
-            LaunchContent(partitions: [], tasks: [], tagHistoryByPartition: [:])
+            LaunchContent(
+                partitions: [TodoViewModel.defaultPartition],
+                tasks: [],
+                tagHistoryByPartition: [:]
+            )
         }
 
         static var demo: LaunchContent {
@@ -222,6 +226,10 @@ class TodoViewModel {
 
     static func fallbackLaunchContent(isDebugBuild: Bool) -> LaunchContent {
         isDebugBuild ? .demo : .empty
+    }
+
+    private static var defaultPartition: Partition {
+        Partition(id: "work", name: "Work", color: .blue, height: 200)
     }
 
     // MARK: - Computed Properties
@@ -517,6 +525,7 @@ class TodoViewModel {
     }
 
     func deletePartition(_ id: String) {
+        guard partitions.count > 1 else { return }
         performStateMutation {
             partitions.removeAll { $0.id == id }
             tasks.removeAll { $0.partitionId == id }
