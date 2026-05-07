@@ -34,7 +34,7 @@ private final class InlineEditingTextField: NSTextField {
 private struct InlineTaskNameEditor: NSViewRepresentable {
     @Binding var text: String
     let isEditing: Bool
-    let onCommit: () -> Void
+    let onCommit: (String) -> Void
     let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -65,9 +65,11 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
                 nsView.window?.makeFirstResponder(nsView)
                 nsView.selectText(nil)
                 nsView.currentEditor()?.selectAll(nil)
+                context.coordinator.installOutsideClickMonitor()
             }
         } else if !isEditing, context.coordinator.wasEditing {
             context.coordinator.wasEditing = false
+            context.coordinator.removeOutsideClickMonitor()
             if nsView.window?.firstResponder === nsView.currentEditor() {
                 nsView.window?.makeFirstResponder(nil)
             }
@@ -108,15 +110,16 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         @Binding var text: String
-        let onCommit: () -> Void
+        let onCommit: (String) -> Void
         let onCancel: () -> Void
         weak var textField: NSTextField?
         var wasEditing = false
         private var didBeginEditing = false
         private var didCommitFromCommand = false
         private var didCancelFromCommand = false
+        private var outsideClickMonitor: Any?
 
-        init(text: Binding<String>, onCommit: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        init(text: Binding<String>, onCommit: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
             self._text = text
             self.onCommit = onCommit
             self.onCancel = onCancel
@@ -126,6 +129,22 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
             didBeginEditing = false
             didCommitFromCommand = false
             didCancelFromCommand = false
+        }
+
+        func installOutsideClickMonitor() {
+            guard outsideClickMonitor == nil else { return }
+            outsideClickMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown]
+            ) { [weak self] event in
+                self?.commitEditingIfNeeded(for: event)
+                return event
+            }
+        }
+
+        func removeOutsideClickMonitor() {
+            guard let outsideClickMonitor else { return }
+            NSEvent.removeMonitor(outsideClickMonitor)
+            self.outsideClickMonitor = nil
         }
 
         func controlTextDidChange(_ obj: Notification) {
@@ -140,6 +159,7 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
         func controlTextDidEndEditing(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
             text = textField.stringValue
+            removeOutsideClickMonitor()
 
             defer {
                 didBeginEditing = false
@@ -152,14 +172,14 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
                 didCommitFromCommand: didCommitFromCommand,
                 didCancelFromCommand: didCancelFromCommand
             ) else { return }
-            onCommit()
+            onCommit(textField.stringValue)
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 text = textView.string
                 didCommitFromCommand = true
-                onCommit()
+                onCommit(textView.string)
                 return true
             }
 
@@ -170,6 +190,45 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
             }
 
             return false
+        }
+
+        private func commitEditingIfNeeded(for event: NSEvent) {
+            guard
+                let textField,
+                let window = textField.window,
+                event.window === window,
+                textField.currentEditor() != nil
+            else { return }
+
+            let isInsideEditorBounds = Self.isEventInsideEditorBounds(event, textField: textField)
+            let hitView = Self.hitView(for: event, in: window)
+            guard ClickOutsideHitTesting.shouldCommitEditingOnMouseDown(
+                isEditing: true,
+                isInsideEditorBounds: isInsideEditorBounds,
+                hitView: hitView
+            ) else { return }
+
+            let committedText = textField.currentEditor()?.string ?? textField.stringValue
+            text = committedText
+            didCommitFromCommand = true
+            removeOutsideClickMonitor()
+            onCommit(committedText)
+            window.makeFirstResponder(nil)
+        }
+
+        private static func hitView(for event: NSEvent, in window: NSWindow) -> NSView? {
+            guard let contentView = window.contentView else { return nil }
+            let location = contentView.convert(event.locationInWindow, from: nil)
+            return contentView.hitTest(location)
+        }
+
+        private static func isEventInsideEditorBounds(_ event: NSEvent, textField: NSTextField) -> Bool {
+            let location = textField.convert(event.locationInWindow, from: nil)
+            return textField.bounds.contains(location)
+        }
+
+        deinit {
+            removeOutsideClickMonitor()
         }
     }
 }
@@ -218,9 +277,64 @@ enum DueDateLabelLayout {
     }
 
     static func tagWidth(for text: String) -> CGFloat {
+        textWidth(for: text) + (textTrailingInset * 2)
+    }
+
+    static func plainWidth(for text: String) -> CGFloat {
+        textWidth(for: text) + textTrailingInset
+    }
+
+    private static func textWidth(for text: String) -> CGFloat {
         let font = NSFont(name: "PingFangSC-Regular", size: 11) ?? .systemFont(ofSize: 11, weight: .regular)
-        let textWidth = ceil((text as NSString).size(withAttributes: [.font: font]).width)
-        return textWidth + (textTrailingInset * 2)
+        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
+    }
+}
+
+enum TaskRowTrailingLayout {
+    static func contentGap(
+        hasDueDate: Bool,
+        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
+        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap
+    ) -> CGFloat {
+        hasDueDate ? dueDateGap : unsetDueDateGap
+    }
+
+    static func leadingPadding(
+        hasDueDate: Bool,
+        rowSpacing: CGFloat = DesignTokens.Spacing.taskLeadingGap,
+        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
+        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap
+    ) -> CGFloat {
+        max(
+            contentGap(
+                hasDueDate: hasDueDate,
+                dueDateGap: dueDateGap,
+                unsetDueDateGap: unsetDueDateGap
+            ) - rowSpacing,
+            0
+        )
+    }
+
+    static func reservedWidth(
+        hasDueDate: Bool,
+        dueDateContentWidth: CGFloat,
+        rowSpacing: CGFloat = DesignTokens.Spacing.taskLeadingGap,
+        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
+        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap,
+        trailingControlWidth: CGFloat = DesignTokens.Size.trailingControl,
+        trailingInset: CGFloat = DesignTokens.Spacing.sectionPaddingHorizontal
+            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
+            - DesignTokens.Spacing.rowHorizontal
+    ) -> CGFloat {
+        let contentWidth = hasDueDate
+            ? max(dueDateContentWidth, trailingControlWidth)
+            : trailingControlWidth
+        return leadingPadding(
+            hasDueDate: hasDueDate,
+            rowSpacing: rowSpacing,
+            dueDateGap: dueDateGap,
+            unsetDueDateGap: unsetDueDateGap
+        ) + contentWidth + trailingInset
     }
 }
 
@@ -622,7 +736,6 @@ struct TaskItemView: View {
                 plainDueDateText(DateHelpers.formatDueDate(dueDate))
             }
         }
-        .frame(width: DueDateLabelLayout.labelWidth, alignment: .trailing)
     }
 
     private var dueDateControl: some View {
@@ -674,9 +787,9 @@ struct TaskItemView: View {
                 }
             }
         }
-        .padding(.leading, DesignTokens.Spacing.taskDueDateGap)
+        .padding(.leading, dueDateLeadingPadding)
         .padding(.trailing, dueDateTrailingInset)
-        .frame(width: DesignTokens.Size.dueDateColumnWidth, alignment: .trailing)
+        .frame(width: dueDateReservedWidth, alignment: .trailing)
     }
 
     private var showsDueDateControl: Bool {
@@ -788,8 +901,33 @@ struct TaskItemView: View {
             - DesignTokens.Spacing.rowHorizontal
     }
 
-    private func commitRename() {
-        let parsed = TodoTask.parseDisplayText(editingName)
+    private var dueDateReservedWidth: CGFloat {
+        TaskRowTrailingLayout.reservedWidth(
+            hasDueDate: task.dueDate != nil,
+            dueDateContentWidth: dueDateContentWidth,
+            trailingInset: dueDateTrailingInset
+        )
+    }
+
+    private var dueDateLeadingPadding: CGFloat {
+        TaskRowTrailingLayout.leadingPadding(hasDueDate: task.dueDate != nil)
+    }
+
+    private var dueDateContentWidth: CGFloat {
+        guard let dueDate = task.dueDate else { return 0 }
+        let formattedDate = DateHelpers.formatDueDate(dueDate)
+        let daysFromToday = DateHelpers.daysFromToday(dueDate) ?? .max
+
+        switch daysFromToday {
+        case ..<3:
+            return DueDateLabelLayout.tagWidth(for: formattedDate)
+        default:
+            return DueDateLabelLayout.plainWidth(for: formattedDate)
+        }
+    }
+
+    private func commitRename(_ displayText: String) {
+        let parsed = TodoTask.parseDisplayText(displayText)
         if !parsed.name.isEmpty {
             onSaveTask(task.id, parsed.markupText)
         }

@@ -27,6 +27,7 @@ enum DesignTokens {
         static let rowVertical: CGFloat = 8
         static let taskLeadingGap: CGFloat = 4
         static let taskDueDateGap: CGFloat = 12
+        static let taskUnsetDueDateGap: CGFloat = 4
         static let taskMetaGap: CGFloat = 5
         static let tagGap: CGFloat = 6
         static let inlineTagTextGap: CGFloat = 6
@@ -163,8 +164,9 @@ enum DesignTokens {
             let trailingInset = Spacing.sectionPaddingHorizontal
                 + Spacing.partitionHeaderContentLeadingInset
                 - Spacing.rowHorizontal
+            let leadingPadding = max(Spacing.taskDueDateGap - Spacing.taskLeadingGap, 0)
 
-            return ceil(Spacing.taskDueDateGap + widestDueContent + trailingInset)
+            return ceil(leadingPadding + widestDueContent + trailingInset)
         }
 
         static let partitionIndicator: CGFloat = 8

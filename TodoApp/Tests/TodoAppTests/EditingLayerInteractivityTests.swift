@@ -29,4 +29,14 @@ final class EditingLayerInteractivityTests: XCTestCase {
             )
         )
     }
+
+    func testEndEditingDoesNotCommitAfterExplicitCommandAlreadyCommitted() {
+        XCTAssertFalse(
+            EditingLayerInteractivity.shouldCommitOnEndEditing(
+                didBeginEditing: true,
+                didCommitFromCommand: true,
+                didCancelFromCommand: false
+            )
+        )
+    }
 }

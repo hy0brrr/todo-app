@@ -1,6 +1,16 @@
 import AppKit
 
 enum ClickOutsideHitTesting {
+    static func shouldCommitEditingOnMouseDown(
+        isEditing: Bool,
+        isInsideEditorBounds: Bool = false,
+        hitView: NSView?
+    ) -> Bool {
+        isEditing
+            && !isInsideEditorBounds
+            && shouldTreatAsOutsideClick(hitView: hitView)
+    }
+
     static func shouldTreatAsOutsideClick(hitView: NSView?) -> Bool {
         !isTextEditingView(hitView)
     }
