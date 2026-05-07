@@ -82,7 +82,14 @@ dmg_basename="${APP_NAME}-macOS-v${version}"
 output_stub="${DIST_DIR}/${dmg_basename}"
 final_dmg="${output_stub}.dmg"
 
-ditto "${app_bundle_path}" "${staging_dir}/${app_bundle_name}"
+staged_app_path="${staging_dir}/${app_bundle_name}"
+ditto "${app_bundle_path}" "${staged_app_path}"
+
+if ! codesign --verify --deep --strict --verbose=2 "${staged_app_path}" >/dev/null 2>&1; then
+    echo "Applying ad-hoc signature to ${app_bundle_name}"
+    codesign --force --deep --sign - "${staged_app_path}"
+fi
+codesign --verify --deep --strict --verbose=2 "${staged_app_path}"
 
 mkdir -p "${staging_dir}/.background"
 if [[ -f "${CUSTOM_BACKGROUND_PATH}" ]]; then

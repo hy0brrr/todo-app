@@ -12,10 +12,21 @@ This command:
 
 - builds the macOS app from `TodoApp/TodoApp.xcodeproj`
 - outputs a release app bundle named `tidy.app`
+- verifies the staged app bundle signature and applies an ad-hoc signature when needed
 - creates a DMG named `dist/tidy-macOS-v<version>.dmg`
 - sets the mounted volume name to `tidy`
 - writes a Finder layout with `tidy.app` on the left and `Applications` on the right
 - uses `packaging/dmg/background.png` if present, otherwise generates a basic background automatically
+
+## Signing behavior
+
+The default package does not require an Apple Developer account. If the built app
+does not already have a valid bundle signature, the packaging script applies a
+local ad-hoc signature before creating the DMG.
+
+This keeps the app bundle structurally valid for macOS, but it does not notarize
+the app. First-time users may still need to allow the app from System Settings >
+Privacy & Security with Open Anyway.
 
 ## Optional overrides
 
