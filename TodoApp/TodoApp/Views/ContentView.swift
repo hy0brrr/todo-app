@@ -20,34 +20,21 @@ struct ContentView: View {
                 GeometryReader { geometry in
                     let topInset = DesignTokens.Spacing.screenTopInset
                     let bottomInset = DesignTokens.Spacing.screenVerticalInset
-                    let totalHandleHeight = CGFloat(viewModel.partitions.count) * DesignTokens.Spacing.cardGap
                     let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
-                    let minimumPartitionStackHeight = CGFloat(viewModel.partitions.count)
-                        * DesignTokens.Size.partitionMinHeight
-                        + totalHandleHeight
-                    let maxTotalPartitionHeights = max(
-                        0,
-                        contentHeight
-                            - DesignTokens.Size.completedMinHeight
-                            - totalHandleHeight
+                    let layout = PartitionAreaLayout.calculate(
+                        contentHeight: contentHeight,
+                        partitionHeights: viewModel.partitions.map(\.height)
                     )
-                    let partitionStackHeight = totalPartitionHeight
-                    let completedHeight = max(
-                        DesignTokens.Size.completedMinHeight,
-                        contentHeight - partitionStackHeight
-                    )
-                    let partitionsAreaHeight = max(0, contentHeight - completedHeight)
-                    let shouldScrollPartitions = minimumPartitionStackHeight > partitionsAreaHeight
 
                     VStack(spacing: 0) {
-                        partitionStack(maxTotalPartitionHeights: maxTotalPartitionHeights)
+                        partitionStack(maxTotalPartitionHeights: layout.maxTotalPartitionHeights)
                             .frame(maxWidth: .infinity)
                             .modifier(
                                 PartitionAreaScrollModifier(
-                                    isScrollable: shouldScrollPartitions
+                                    isScrollable: layout.shouldScrollPartitions
                                 )
                             )
-                            .frame(height: partitionsAreaHeight)
+                            .frame(height: layout.partitionsAreaHeight)
 
                         CompletedSectionView(
                             groups: viewModel.completedTaskGroups,
@@ -59,7 +46,7 @@ struct ContentView: View {
                             },
                             onToggleComplete: { viewModel.toggleComplete($0) }
                         )
-                        .frame(height: completedHeight)
+                        .frame(height: layout.completedHeight)
                     }
                     .padding(.horizontal, DesignTokens.Spacing.screenHorizontalInset)
                     .padding(.top, topInset)
@@ -85,14 +72,6 @@ struct ContentView: View {
                 onDismiss: { viewModel.showManagePartitions = false }
             )
         }
-    }
-
-    private var totalPartitionHeight: CGFloat {
-        let partitionHeights = viewModel.partitions.reduce(CGFloat.zero) { partialResult, partition in
-            partialResult + max(DesignTokens.Size.partitionMinHeight, partition.height)
-        }
-        let handleHeights = CGFloat(viewModel.partitions.count) * DesignTokens.Spacing.cardGap
-        return partitionHeights + handleHeights
     }
 
     private var backgroundView: some View {
@@ -174,6 +153,46 @@ struct ContentView: View {
                 .frame(height: DesignTokens.Spacing.cardGap)
             }
         }
+    }
+}
+
+struct PartitionAreaLayout {
+    let maxTotalPartitionHeights: CGFloat
+    let partitionStackHeight: CGFloat
+    let completedHeight: CGFloat
+    let partitionsAreaHeight: CGFloat
+    let shouldScrollPartitions: Bool
+
+    static func calculate(
+        contentHeight: CGFloat,
+        partitionHeights: [CGFloat],
+        partitionMinHeight: CGFloat = DesignTokens.Size.partitionMinHeight,
+        completedMinHeight: CGFloat = DesignTokens.Size.completedMinHeight,
+        handleGap: CGFloat = DesignTokens.Spacing.cardGap
+    ) -> PartitionAreaLayout {
+        let totalHandleHeight = CGFloat(partitionHeights.count) * handleGap
+        let partitionStackHeight = partitionHeights.reduce(CGFloat.zero) { partialResult, partitionHeight in
+            partialResult + max(partitionMinHeight, partitionHeight)
+        } + totalHandleHeight
+        let maxTotalPartitionHeights = max(
+            0,
+            contentHeight
+                - completedMinHeight
+                - totalHandleHeight
+        )
+        let completedHeight = max(
+            completedMinHeight,
+            contentHeight - partitionStackHeight
+        )
+        let partitionsAreaHeight = max(0, contentHeight - completedHeight)
+
+        return PartitionAreaLayout(
+            maxTotalPartitionHeights: maxTotalPartitionHeights,
+            partitionStackHeight: partitionStackHeight,
+            completedHeight: completedHeight,
+            partitionsAreaHeight: partitionsAreaHeight,
+            shouldScrollPartitions: partitionStackHeight > partitionsAreaHeight
+        )
     }
 }
 

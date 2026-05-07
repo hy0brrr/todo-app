@@ -174,7 +174,167 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
     }
 }
 
+enum TodoCursors {
+    static var starMarkerAction: NSCursor {
+        .pointingHand
+    }
+}
+
+enum TaskItemLeadingControlLayout {
+    static func checkboxLeadingInset(
+        sectionPaddingHorizontal: CGFloat = DesignTokens.Spacing.sectionPaddingHorizontal,
+        partitionHeaderContentLeadingInset: CGFloat = DesignTokens.Spacing.partitionHeaderContentLeadingInset,
+        rowHorizontal: CGFloat = DesignTokens.Spacing.rowHorizontal,
+        checkboxTapTarget: CGFloat = DesignTokens.Size.checkboxTapTarget,
+        checkbox: CGFloat = DesignTokens.Size.checkbox
+    ) -> CGFloat {
+        let checkboxVisualInset = (checkboxTapTarget - checkbox) / 2
+        return sectionPaddingHorizontal
+            + partitionHeaderContentLeadingInset
+            - rowHorizontal
+            - checkboxVisualInset
+    }
+
+    static func starMarkerHitRegionLeadingInset(
+        depth: Int,
+        rowHorizontal: CGFloat = DesignTokens.Spacing.rowHorizontal,
+        childTaskIndent: CGFloat = DesignTokens.Spacing.childTaskIndent,
+        checkboxLeadingInset: CGFloat = checkboxLeadingInset(),
+        starMarkerTapTargetWidth: CGFloat = DesignTokens.Size.starMarkerTapTargetWidth
+    ) -> CGFloat {
+        rowHorizontal
+            + (CGFloat(depth) * childTaskIndent)
+            + checkboxLeadingInset
+            - starMarkerTapTargetWidth
+    }
+}
+
+enum DueDateLabelLayout {
+    static let textWidth: CGFloat = DesignTokens.Size.dueDateTextContentWidth
+    static let textTrailingInset: CGFloat = DesignTokens.Spacing.dueDateTagHorizontal
+
+    static var labelWidth: CGFloat {
+        textWidth + (textTrailingInset * 2)
+    }
+
+    static func tagWidth(for text: String) -> CGFloat {
+        let font = NSFont(name: "PingFangSC-Regular", size: 11) ?? .systemFont(ofSize: 11, weight: .regular)
+        let textWidth = ceil((text as NSString).size(withAttributes: [.font: font]).width)
+        return textWidth + (textTrailingInset * 2)
+    }
+}
+
 // MARK: - Task Item View
+
+private struct HoverCursorModifier: ViewModifier {
+    let cursor: NSCursor
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { hovering in
+                isHovering = hovering
+                if hovering {
+                    cursor.set()
+                } else {
+                    NSCursor.arrow.set()
+                }
+            }
+            .onContinuousHover { phase in
+                switch phase {
+                case .active:
+                    isHovering = true
+                    cursor.set()
+                case .ended:
+                    isHovering = false
+                    NSCursor.arrow.set()
+                }
+            }
+            .onDisappear {
+                guard isHovering else { return }
+                isHovering = false
+                NSCursor.arrow.set()
+            }
+    }
+}
+
+private extension View {
+    func hoverCursor(_ cursor: NSCursor) -> some View {
+        modifier(HoverCursorModifier(cursor: cursor))
+    }
+}
+
+private struct StarMarkerInteractionRegion: NSViewRepresentable {
+    let cursor: NSCursor
+    let onHover: (Bool) -> Void
+    let onClick: () -> Void
+
+    func makeNSView(context: Context) -> StarMarkerInteractionNSView {
+        let view = StarMarkerInteractionNSView()
+        view.cursor = cursor
+        view.onHover = onHover
+        view.onClick = onClick
+        return view
+    }
+
+    func updateNSView(_ nsView: StarMarkerInteractionNSView, context: Context) {
+        nsView.cursor = cursor
+        nsView.onHover = onHover
+        nsView.onClick = onClick
+        nsView.updateTrackingAreas()
+        nsView.window?.invalidateCursorRects(for: nsView)
+    }
+}
+
+private final class StarMarkerInteractionNSView: NSView {
+    var cursor: NSCursor = .arrow
+    var onHover: (Bool) -> Void = { _ in }
+    var onClick: () -> Void = {}
+
+    private var trackingAreaRef: NSTrackingArea?
+
+    override var mouseDownCanMoveWindow: Bool {
+        false
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingAreaRef {
+            removeTrackingArea(trackingAreaRef)
+        }
+
+        let trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeInKeyWindow, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(trackingArea)
+        trackingAreaRef = trackingArea
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: cursor)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        cursor.set()
+        onHover(true)
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        cursor.set()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        NSCursor.arrow.set()
+        onHover(false)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onClick()
+    }
+}
 
 enum TaskItemRenderMode {
     case active
@@ -272,6 +432,21 @@ struct TaskItemView: View {
                 }
             }
         }
+        .overlay(alignment: .leading) {
+            if StarMarkerPresentation.allowsInteraction(renderMode: renderMode) {
+                StarMarkerInteractionRegion(
+                    cursor: TodoCursors.starMarkerAction,
+                    onHover: { isHoveringStar = $0 },
+                    onClick: { onToggleStar(task.id) }
+                )
+                .frame(
+                    width: DesignTokens.Size.starMarkerTapTargetWidth,
+                    height: DesignTokens.Size.checkboxTapTarget
+                )
+                .padding(.leading, starMarkerHitRegionLeadingInset)
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+        }
     }
 
     private var leadingControls: some View {
@@ -339,7 +514,7 @@ struct TaskItemView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .hoverCursor(.iBeam)
     }
 
     private func trailingGap(after index: Int, segments: [TaskTextSegment]) -> CGFloat {
@@ -349,8 +524,9 @@ struct TaskItemView: View {
             : 0
     }
 
+    @ViewBuilder
     private var checkboxButton: some View {
-        Button {
+        let button = Button {
             guard allowsCompletionToggle else { return }
             onToggleComplete(task.id)
         } label: {
@@ -377,10 +553,18 @@ struct TaskItemView: View {
         .buttonStyle(.plain)
         .onHover { isHoveringCheckbox = $0 }
         .allowsHitTesting(allowsCompletionToggle)
+
+        if allowsCompletionToggle {
+            button.hoverCursor(.pointingHand)
+        } else {
+            button
+        }
     }
 
     @ViewBuilder
     private var starMarkerButton: some View {
+        let markerLeadingInset = DesignTokens.Spacing.starMarkerLeadingOffset
+        let hitTargetLeadingOffset = checkboxAlignedLeadingInset - DesignTokens.Size.starMarkerTapTargetWidth
         let marker = RoundedRectangle(cornerRadius: DesignTokens.Radius.starMarker, style: .continuous)
             .fill(starMarkerColor)
             .frame(
@@ -388,35 +572,33 @@ struct TaskItemView: View {
                 height: DesignTokens.Size.starMarkerHeight
             )
             .rotationEffect(.degrees(14))
+        let hitTarget = ZStack(alignment: .leading) {
+            marker
+                .offset(x: markerLeadingInset)
+        }
             .frame(
                 width: DesignTokens.Size.starMarkerTapTargetWidth,
-                height: DesignTokens.Size.checkboxTapTarget
+                height: DesignTokens.Size.checkboxTapTarget,
+                alignment: .leading
             )
             .contentShape(Rectangle())
-            .offset(x: DesignTokens.Spacing.starMarkerLeadingOffset)
+            .offset(x: hitTargetLeadingOffset)
 
         if StarMarkerPresentation.allowsInteraction(renderMode: renderMode) {
-            Button {
-                onToggleStar(task.id)
-            } label: {
-                marker
-            }
-            .buttonStyle(.plain)
-            .onHover { isHoveringStar = $0 }
-            .allowsHitTesting(task.isStarred || isHovering || isHoveringStar)
+            hitTarget
+                .allowsHitTesting(false)
             .accessibilityLabel(task.isStarred ? "Remove star" : "Mark as starred")
         } else {
-            marker
+            hitTarget
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
     }
 
-    @ViewBuilder
     private func dueDateLabel(_ dueDate: Date) -> some View {
         let daysFromToday = DateHelpers.daysFromToday(dueDate) ?? .max
 
-        Group {
+        return Group {
             switch daysFromToday {
             case ..<0:
                 dueDateTag(
@@ -437,12 +619,10 @@ struct TaskItemView: View {
                     text: DateHelpers.formatDueDate(dueDate)
                 )
             default:
-                Text(DateHelpers.formatDueDate(dueDate))
-                    .font(DesignTokens.Typography.dueDateTag)
-                    .foregroundStyle(DesignTokens.ColorRole.secondaryText)
-                    .padding(.trailing, DesignTokens.Spacing.dueDateTagHorizontal)
+                plainDueDateText(DateHelpers.formatDueDate(dueDate))
             }
         }
+        .frame(width: DueDateLabelLayout.labelWidth, alignment: .trailing)
     }
 
     private var dueDateControl: some View {
@@ -454,6 +634,7 @@ struct TaskItemView: View {
                     dueDateLabel(dueDate)
                 }
                 .buttonStyle(.plain)
+                .hoverCursor(.pointingHand)
                 .popover(isPresented: $showDatePicker) {
                     DatePickerPopover(
                         currentDate: task.dueDate,
@@ -479,6 +660,7 @@ struct TaskItemView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringCalendar = $0 }
+                .hoverCursor(.pointingHand)
                 .opacity(isHovering || showDatePicker ? 1 : 0)
                 .popover(isPresented: $showDatePicker) {
                     DatePickerPopover(
@@ -502,10 +684,8 @@ struct TaskItemView: View {
     }
 
     private func dueDateTag(text: String, background: Color) -> some View {
-        Text(text)
-            .font(DesignTokens.Typography.dueDateTag)
-            .foregroundStyle(DesignTokens.ColorRole.dueDateNeutralText)
-            .padding(.horizontal, DesignTokens.Spacing.dueDateTagHorizontal)
+        dueDateText(text, color: DesignTokens.ColorRole.dueDateNeutralText)
+            .padding(.horizontal, DueDateLabelLayout.textTrailingInset)
             .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
@@ -516,15 +696,25 @@ struct TaskItemView: View {
     private func outlinedDueDateTag(text: String) -> some View {
         let color = DesignTokens.ColorRole.secondaryText
 
-        return Text(text)
-            .font(DesignTokens.Typography.dueDateTag)
-            .foregroundStyle(color)
-            .padding(.horizontal, DesignTokens.Spacing.dueDateTagHorizontal)
+        return dueDateText(text, color: color)
+            .padding(.horizontal, DueDateLabelLayout.textTrailingInset)
             .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
                     .strokeBorder(color, lineWidth: DesignTokens.Stroke.dueDateOutlineLineWidth)
             )
+    }
+
+    private func plainDueDateText(_ text: String) -> some View {
+        dueDateText(text, color: DesignTokens.ColorRole.secondaryText)
+            .padding(.trailing, DueDateLabelLayout.textTrailingInset)
+    }
+
+    private func dueDateText(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(DesignTokens.Typography.dueDateTag)
+            .foregroundStyle(color)
+            .lineLimit(1)
     }
 
     private var starMarkerColor: Color {
@@ -585,11 +775,11 @@ struct TaskItemView: View {
     }
 
     private var checkboxAlignedLeadingInset: CGFloat {
-        let checkboxVisualInset = (DesignTokens.Size.checkboxTapTarget - DesignTokens.Size.checkbox) / 2
-        return DesignTokens.Spacing.sectionPaddingHorizontal
-            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
-            - DesignTokens.Spacing.rowHorizontal
-            - checkboxVisualInset
+        TaskItemLeadingControlLayout.checkboxLeadingInset()
+    }
+
+    private var starMarkerHitRegionLeadingInset: CGFloat {
+        TaskItemLeadingControlLayout.starMarkerHitRegionLeadingInset(depth: depth)
     }
 
     private var dueDateTrailingInset: CGFloat {

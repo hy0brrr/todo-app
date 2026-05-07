@@ -34,7 +34,7 @@ enum DesignTokens {
         static let partitionTitleIconOpticalOffsetX: CGFloat = -0.5
         static let addTaskPlusOpticalOffsetX: CGFloat = -0.5
         static let checkboxTitleOverhang: CGFloat = 2
-        static let starMarkerLeadingOffset: CGFloat = -7
+        static let starMarkerLeadingOffset: CGFloat = 11
         static let dueDateTagHorizontal: CGFloat = 7
         static let dueDateTagVertical: CGFloat = 2
         static let starMarkerPreviewOpacity: Double = 0.72
@@ -146,11 +146,16 @@ enum DesignTokens {
     }
 
     enum Size {
-        private static func dueDateColumnWidthValue() -> CGFloat {
+        private static func dueDateTextContentWidthValue() -> CGFloat {
             let font = NSFont(name: "PingFangSC-Regular", size: 11) ?? .systemFont(ofSize: 11, weight: .regular)
-            let widestLabel = ["Due Tomorrow", "Due Yesterday"]
+            return ["Due Tomorrow", "Due Yesterday"]
                 .map { ($0 as NSString).size(withAttributes: [.font: font]).width }
-                .max() ?? 0
+                .max()
+                .map(ceil) ?? 0
+        }
+
+        private static func dueDateColumnWidthValue() -> CGFloat {
+            let widestLabel = dueDateTextContentWidth
             let widestDueContent = max(
                 ceil(widestLabel + (Spacing.dueDateTagHorizontal * 2)),
                 trailingControl
@@ -169,8 +174,9 @@ enum DesignTokens {
         static let inlineTextEditorHeight: CGFloat = 20
         static let starMarkerWidth: CGFloat = 3
         static let starMarkerHeight: CGFloat = 18
-        static let starMarkerTapTargetWidth: CGFloat = 12
+        static let starMarkerTapTargetWidth: CGFloat = 16
         static let trailingControl: CGFloat = 24
+        static let dueDateTextContentWidth: CGFloat = dueDateTextContentWidthValue()
         static let dueDateColumnWidth: CGFloat = dueDateColumnWidthValue()
         static let partitionColorDot: CGFloat = 14
         static let modalPartitionDot: CGFloat = 10
