@@ -455,6 +455,32 @@ enum TaskItemRenderMode {
     case completed
 }
 
+enum StarMarkerFillStyle: Equatable {
+    case clear
+    case dueDateUrgentTag
+    case primaryText(opacity: Double)
+    case secondaryText(opacity: Double)
+
+    var color: Color {
+        switch self {
+        case .clear:
+            return .clear
+        case .dueDateUrgentTag:
+            return DesignTokens.ColorRole.dueDateUrgentTag
+        case .primaryText(let opacity):
+            return DesignTokens.ColorRole.primaryText.opacity(opacity)
+        case .secondaryText(let opacity):
+            return DesignTokens.ColorRole.secondaryText.opacity(opacity)
+        }
+    }
+}
+
+struct StarMarkerHoverState: Equatable {
+    let isHoveringRow: Bool
+    let isHoveringMarker: Bool
+    let suppressesMarkerHoverUntilExit: Bool
+}
+
 enum StarMarkerPresentation {
     static func allowsInteraction(renderMode: TaskItemRenderMode) -> Bool {
         renderMode == .active
@@ -467,6 +493,75 @@ enum StarMarkerPresentation {
         isHoveringMarker: Bool
     ) -> Bool {
         taskIsStarred || (renderMode == .active && (isHoveringRow || isHoveringMarker))
+    }
+
+    static func fillStyle(
+        taskIsRoot: Bool,
+        taskIsStarred: Bool,
+        renderMode: TaskItemRenderMode,
+        isHoveringRow: Bool,
+        isHoveringMarker: Bool
+    ) -> StarMarkerFillStyle {
+        guard showsMarker(
+            taskIsStarred: taskIsStarred,
+            renderMode: renderMode,
+            isHoveringRow: isHoveringRow,
+            isHoveringMarker: isHoveringMarker
+        ) else {
+            return .clear
+        }
+
+        if taskIsStarred {
+            return taskIsRoot
+                ? .dueDateUrgentTag
+                : .primaryText(opacity: 0.56)
+        }
+
+        if isHoveringMarker {
+            return taskIsRoot
+                ? .primaryText(opacity: 1)
+                : .primaryText(opacity: 0.72)
+        }
+
+        if isHoveringRow {
+            return taskIsRoot
+                ? .primaryText(opacity: DesignTokens.Spacing.starMarkerPreviewOpacity)
+                : .secondaryText(opacity: 0.32)
+        }
+
+        return .clear
+    }
+
+    static func hoverStateAfterStarStateChange(
+        wasHoveringRow: Bool,
+        wasHoveringMarker: Bool,
+        suppressesMarkerHoverUntilExit: Bool
+    ) -> StarMarkerHoverState {
+        StarMarkerHoverState(
+            isHoveringRow: false,
+            isHoveringMarker: false,
+            suppressesMarkerHoverUntilExit: wasHoveringMarker || suppressesMarkerHoverUntilExit
+        )
+    }
+
+    static func hoverStateAfterMarkerHoverChange(
+        isHoveringMarker: Bool,
+        isHoveringRow: Bool,
+        suppressesMarkerHoverUntilExit: Bool
+    ) -> StarMarkerHoverState {
+        guard suppressesMarkerHoverUntilExit else {
+            return StarMarkerHoverState(
+                isHoveringRow: isHoveringRow,
+                isHoveringMarker: isHoveringMarker,
+                suppressesMarkerHoverUntilExit: false
+            )
+        }
+
+        return StarMarkerHoverState(
+            isHoveringRow: isHoveringMarker ? false : isHoveringRow,
+            isHoveringMarker: false,
+            suppressesMarkerHoverUntilExit: isHoveringMarker
+        )
     }
 }
 
@@ -490,6 +585,7 @@ struct TaskItemView: View {
     @State private var isHoveringCheckbox = false
     @State private var isHoveringStar = false
     @State private var isHoveringCalendar = false
+    @State private var suppressesStarHoverUntilExit = false
 
     init(
         task: TodoTask,
@@ -546,11 +642,30 @@ struct TaskItemView: View {
                 }
             }
         }
+        .onChange(of: task.isStarred) { _, _ in
+            let hoverState = StarMarkerPresentation.hoverStateAfterStarStateChange(
+                wasHoveringRow: isHovering,
+                wasHoveringMarker: isHoveringStar,
+                suppressesMarkerHoverUntilExit: suppressesStarHoverUntilExit
+            )
+            isHovering = hoverState.isHoveringRow
+            isHoveringStar = hoverState.isHoveringMarker
+            suppressesStarHoverUntilExit = hoverState.suppressesMarkerHoverUntilExit
+        }
         .overlay(alignment: .leading) {
             if StarMarkerPresentation.allowsInteraction(renderMode: renderMode) {
                 StarMarkerInteractionRegion(
                     cursor: TodoCursors.starMarkerAction,
-                    onHover: { isHoveringStar = $0 },
+                    onHover: { hovering in
+                        let hoverState = StarMarkerPresentation.hoverStateAfterMarkerHoverChange(
+                            isHoveringMarker: hovering,
+                            isHoveringRow: isHovering,
+                            suppressesMarkerHoverUntilExit: suppressesStarHoverUntilExit
+                        )
+                        isHovering = hoverState.isHoveringRow
+                        isHoveringStar = hoverState.isHoveringMarker
+                        suppressesStarHoverUntilExit = hoverState.suppressesMarkerHoverUntilExit
+                    },
                     onClick: { onToggleStar(task.id) }
                 )
                 .frame(
@@ -831,32 +946,13 @@ struct TaskItemView: View {
     }
 
     private var starMarkerColor: Color {
-        guard StarMarkerPresentation.showsMarker(
+        StarMarkerPresentation.fillStyle(
+            taskIsRoot: task.isRootTask,
             taskIsStarred: task.isStarred,
             renderMode: renderMode,
             isHoveringRow: isHovering,
             isHoveringMarker: isHoveringStar
-        ) else {
-            return .clear
-        }
-
-        if task.isStarred {
-            return task.isRootTask
-                ? DesignTokens.ColorRole.dueDateUrgentTag
-                : DesignTokens.ColorRole.primaryText.opacity(0.56)
-        }
-
-        if isHoveringStar {
-            return task.isRootTask ? .white : Color.white.opacity(0.82)
-        }
-
-        if isHovering {
-            return task.isRootTask
-                ? Color.white.opacity(DesignTokens.Spacing.starMarkerPreviewOpacity)
-                : DesignTokens.ColorRole.secondaryText.opacity(0.32)
-        }
-
-        return .clear
+        ).color
     }
 
     private var taskNameColor: Color {

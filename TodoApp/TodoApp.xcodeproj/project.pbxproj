@@ -361,8 +361,8 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = tidy;
-				INFOPLIST_KEY_CFBundleName = tidy;
+				INFOPLIST_KEY_CFBundleDisplayName = "tidy Demo";
+				INFOPLIST_KEY_CFBundleName = "tidy Demo";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
 				INFOPLIST_KEY_NSPrincipalClass = "";
@@ -371,9 +371,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 2.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.todoapp.TodoApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.todoapp.TodoApp.demo;
 				PRODUCT_MODULE_NAME = TodoApp;
-				PRODUCT_NAME = tidy;
+				PRODUCT_NAME = "tidy Demo";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};

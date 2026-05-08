@@ -69,4 +69,82 @@ final class StarMarkerPresentationTests: XCTestCase {
             checkboxHitLeading
         )
     }
+
+    func testUnstarredRootHoverMarkerUsesDarkPreviewFill() {
+        XCTAssertEqual(
+            StarMarkerPresentation.fillStyle(
+                taskIsRoot: true,
+                taskIsStarred: false,
+                renderMode: .active,
+                isHoveringRow: false,
+                isHoveringMarker: true
+            ),
+            .primaryText(opacity: 1)
+        )
+    }
+
+    func testUnstarredRootRowHoverUsesDarkPreviewFill() {
+        XCTAssertEqual(
+            StarMarkerPresentation.fillStyle(
+                taskIsRoot: true,
+                taskIsStarred: false,
+                renderMode: .active,
+                isHoveringRow: true,
+                isHoveringMarker: false
+            ),
+            .primaryText(opacity: DesignTokens.Spacing.starMarkerPreviewOpacity)
+        )
+    }
+
+    func testUnstarredRootIgnoresStaleMarkerHoverAfterStarStateChanges() {
+        let hoverState = StarMarkerPresentation.hoverStateAfterStarStateChange(
+            wasHoveringRow: true,
+            wasHoveringMarker: true,
+            suppressesMarkerHoverUntilExit: false
+        )
+
+        XCTAssertFalse(hoverState.isHoveringRow)
+        XCTAssertFalse(hoverState.isHoveringMarker)
+        XCTAssertTrue(hoverState.suppressesMarkerHoverUntilExit)
+        XCTAssertEqual(
+            StarMarkerPresentation.fillStyle(
+                taskIsRoot: true,
+                taskIsStarred: false,
+                renderMode: .active,
+                isHoveringRow: hoverState.isHoveringRow,
+                isHoveringMarker: hoverState.isHoveringMarker
+            ),
+            .clear
+        )
+    }
+
+    func testSuppressedMarkerHoverIgnoresReenteredHoverUntilMouseExits() {
+        let staleHover = StarMarkerPresentation.hoverStateAfterMarkerHoverChange(
+            isHoveringMarker: true,
+            isHoveringRow: false,
+            suppressesMarkerHoverUntilExit: true
+        )
+
+        XCTAssertFalse(staleHover.isHoveringMarker)
+        XCTAssertTrue(staleHover.suppressesMarkerHoverUntilExit)
+        XCTAssertEqual(
+            StarMarkerPresentation.fillStyle(
+                taskIsRoot: false,
+                taskIsStarred: false,
+                renderMode: .active,
+                isHoveringRow: staleHover.isHoveringRow,
+                isHoveringMarker: staleHover.isHoveringMarker
+            ),
+            .clear
+        )
+
+        let exitedHover = StarMarkerPresentation.hoverStateAfterMarkerHoverChange(
+            isHoveringMarker: false,
+            isHoveringRow: staleHover.isHoveringRow,
+            suppressesMarkerHoverUntilExit: staleHover.suppressesMarkerHoverUntilExit
+        )
+
+        XCTAssertFalse(exitedHover.isHoveringMarker)
+        XCTAssertFalse(exitedHover.suppressesMarkerHoverUntilExit)
+    }
 }

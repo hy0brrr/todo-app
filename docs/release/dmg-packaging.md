@@ -37,13 +37,15 @@ DMG_BACKGROUND_PATH="/absolute/path/to/custom-background.png" ./scripts/build-dm
 
 ## Naming controls
 
-The user-visible name `tidy` is driven by:
+The release user-visible name `tidy` is driven by:
 
-- `PRODUCT_NAME = tidy` in `TodoApp/TodoApp.xcodeproj/project.pbxproj`
-- `CFBundleName = tidy` in the generated app Info.plist via `INFOPLIST_KEY_CFBundleName`
-- `CFBundleDisplayName = tidy` in the generated app Info.plist via `INFOPLIST_KEY_CFBundleDisplayName`
+- `PRODUCT_NAME = tidy` in the Release configuration in `TodoApp/TodoApp.xcodeproj/project.pbxproj`
+- `CFBundleName = tidy` in the generated Release app Info.plist via `INFOPLIST_KEY_CFBundleName`
+- `CFBundleDisplayName = tidy` in the generated Release app Info.plist via `INFOPLIST_KEY_CFBundleDisplayName`
 - `APP_NAME=tidy` in `scripts/build-dmg.sh` for the DMG filename and staged app name
 - `VOLUME_NAME=tidy` in `scripts/build-dmg.sh` for the mounted disk name
+
+The Debug configuration intentionally builds `tidy Demo.app` with bundle identifier `com.todoapp.TodoApp.demo` so local inspection does not collide with the installed release app.
 
 The internal Swift target and module remain `TodoApp`, so imports and source layout do not need a wide refactor.
 

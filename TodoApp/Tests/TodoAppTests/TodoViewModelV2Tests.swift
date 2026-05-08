@@ -152,6 +152,13 @@ final class TodoViewModelV2Tests: XCTestCase {
         XCTAssertEqual(persistedState.tasks.map(\.name), originalState.tasks.map(\.name))
     }
 
+    func testDefaultPersistenceURLUsesRuntimeBundleIdentifier() {
+        let fileURL = TodoPersistenceStore.defaultFileURL(bundleIdentifier: "com.todoapp.TodoApp.demo")
+
+        XCTAssertTrue(fileURL.path.contains("/com.todoapp.TodoApp.demo/"))
+        XCTAssertEqual(fileURL.lastPathComponent, "todo-data.json")
+    }
+
     func testDeletingPartitionRemovesPersistedTasksAndTagHistory() throws {
         let store = try makePersistenceStore()
         let viewModel = TodoViewModel(
@@ -208,6 +215,22 @@ final class TodoViewModelV2Tests: XCTestCase {
         XCTAssertEqual(parsed.name, "Write weekly review")
         XCTAssertEqual(parsed.tags, ["work", "work"])
         XCTAssertEqual(parsed.markupText, "Write weekly review [work] [work]")
+    }
+
+    func testChineseBracketSyntaxParsesNameAndNormalizesMarkup() {
+        let parsed = TodoTask.parseDisplayText("写周报【工作】 【每周】")
+
+        XCTAssertEqual(parsed.name, "写周报")
+        XCTAssertEqual(parsed.tags, ["工作", "每周"])
+        XCTAssertEqual(parsed.markupText, "写周报 [工作] [每周]")
+    }
+
+    func testMixedBracketSyntaxParsesOnlyMatchedBracketPairs() {
+        let parsed = TodoTask.parseDisplayText("Plan [work] 【重要】 [半中文】 【半英文]")
+
+        XCTAssertEqual(parsed.name, "Plan [半中文】 【半英文]")
+        XCTAssertEqual(parsed.tags, ["work", "重要"])
+        XCTAssertEqual(parsed.markupText, "Plan [work] [重要] [半中文】 【半英文]")
     }
 
     func testBracketSyntaxPreservesInlineTagPositionAfterSave() {

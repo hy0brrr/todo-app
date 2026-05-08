@@ -7,7 +7,7 @@ struct TodoPersistedState: Codable, Equatable {
 }
 
 struct TodoPersistenceStore {
-    static let bundleIdentifier = "com.todoapp.TodoApp"
+    static let fallbackBundleIdentifier = "com.todoapp.TodoApp"
     static let fileName = "todo-data.json"
 
     let fileURL: URL
@@ -55,7 +55,10 @@ struct TodoPersistenceStore {
         )
     }
 
-    static func defaultFileURL(fileManager: FileManager = .default) -> URL {
+    static func defaultFileURL(
+        fileManager: FileManager = .default,
+        bundleIdentifier: String = Bundle.main.bundleIdentifier ?? fallbackBundleIdentifier
+    ) -> URL {
         let applicationSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return applicationSupportURL
             .appendingPathComponent(bundleIdentifier, isDirectory: true)

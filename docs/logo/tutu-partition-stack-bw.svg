@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Tutu App partition stack black and white logo</title>
+  <defs>
+    <mask id="partition-stack-mask">
+      <rect width="512" height="512" fill="black"/>
+      <rect x="112" y="112" width="288" height="288" rx="72" fill="white"/>
+      <path d="M112 206c79-22 180 8 288-23" stroke="black" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M112 292c79-22 180 8 288-23" stroke="black" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="112" y="112" width="288" height="288" rx="72" fill="#050505" mask="url(#partition-stack-mask)"/>
+</svg>

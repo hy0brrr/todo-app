@@ -395,7 +395,7 @@ struct PartitionView: View {
                 "",
                 text: $newTaskName,
                 prompt: Text("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name) with [tag]")
-                    .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
+                .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
             )
                 .textFieldStyle(.plain)
                 .font(DesignTokens.Typography.body)

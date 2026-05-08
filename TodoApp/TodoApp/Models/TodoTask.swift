@@ -74,18 +74,14 @@ struct TodoTask: Identifiable, Equatable, Codable {
     }
 
     static func parseDisplayText(_ text: String) -> ParsedTaskText {
-        let pattern = #"\[([^\[\]]+)\]"#
-        let regex = try? NSRegularExpression(pattern: pattern)
         let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
-        let matches = regex?.matches(in: text, range: fullRange) ?? []
+        let matches = tagRegex.matches(in: text, range: fullRange)
 
         let tags = matches.compactMap { match -> String? in
-            guard match.numberOfRanges > 1,
-                  let range = Range(match.range(at: 1), in: text) else {
+            guard let value = tagValue(in: text, match: match) else {
                 return nil
             }
 
-            let value = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
             return value.isEmpty ? nil : value
         }
 
@@ -110,17 +106,15 @@ struct TodoTask: Identifiable, Equatable, Codable {
     }
 
     static func parseDisplaySegments(from text: String) -> [TaskTextSegment] {
-        let pattern = #"\[([^\[\]]+)\]"#
-        let regex = try? NSRegularExpression(pattern: pattern)
         let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
-        let matches = regex?.matches(in: text, range: fullRange) ?? []
+        let matches = tagRegex.matches(in: text, range: fullRange)
 
         var segments: [TaskTextSegment] = []
         var currentIndex = text.startIndex
 
         for match in matches {
             guard let fullMatchRange = Range(match.range, in: text),
-                  let tagRange = Range(match.range(at: 1), in: text) else {
+                  let tagValue = tagValue(in: text, match: match) else {
                 continue
             }
 
@@ -131,7 +125,6 @@ struct TodoTask: Identifiable, Equatable, Codable {
                 }
             }
 
-            let tagValue = String(text[tagRange]).trimmingCharacters(in: .whitespacesAndNewlines)
             if !tagValue.isEmpty {
                 segments.append(.tag(tagValue))
             }
@@ -147,6 +140,25 @@ struct TodoTask: Identifiable, Equatable, Codable {
         }
 
         return segments
+    }
+
+    private static let tagRegex = try! NSRegularExpression(
+        pattern: #"\[([^\[\]【】]+)\]|【([^\[\]【】]+)】"#
+    )
+
+    private static func tagValue(in text: String, match: NSTextCheckingResult) -> String? {
+        for rangeIndex in 1..<match.numberOfRanges {
+            let matchRange = match.range(at: rangeIndex)
+            guard matchRange.location != NSNotFound,
+                  let range = Range(matchRange, in: text) else {
+                continue
+            }
+
+            let value = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.nilIfEmpty
+        }
+
+        return nil
     }
 
     static func normalizeTags(_ tags: [String]) -> [String] {

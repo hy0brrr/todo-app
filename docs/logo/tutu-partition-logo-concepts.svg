@@ -1,0 +1,137 @@
+<svg width="1800" height="1300" viewBox="0 0 1800 1300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Tutu App partition stack logo concepts</title>
+  <rect width="1800" height="1300" fill="#FFFFFF"/>
+
+  <style>
+    .title { font: 760 54px -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; fill: #050505; letter-spacing: 0; }
+    .subtitle { font: 400 24px -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; fill: #3F3F3F; letter-spacing: 0; }
+    .card { fill: #FFFFFF; stroke: #D9D9D9; stroke-width: 1.5; }
+    .label { font: 720 23px -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; fill: #050505; letter-spacing: 0; }
+    .note { font: 400 17px -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; fill: #4D4D4D; letter-spacing: 0; }
+    .mark { fill: #050505; }
+    .whiteStroke { stroke: #FFFFFF; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+  <text x="96" y="100" class="title">Tutu partition-stack mark</text>
+  <text x="98" y="142" class="subtitle">Black and white directions based on independent spaces, stacked partitions, and a quiet completion gesture.</text>
+
+  <rect x="96" y="205" width="496" height="440" rx="24" class="card"/>
+  <rect x="652" y="205" width="496" height="440" rx="24" class="card"/>
+  <rect x="1208" y="205" width="496" height="440" rx="24" class="card"/>
+  <rect x="96" y="715" width="496" height="440" rx="24" class="card"/>
+  <rect x="652" y="715" width="496" height="440" rx="24" class="card"/>
+  <rect x="1208" y="715" width="496" height="440" rx="24" class="card"/>
+
+  <!-- A -->
+  <g transform="translate(96 205)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-layer-wave">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="18" y="18" width="224" height="224" rx="56" fill="white"/>
+          <path d="M18 95c55-23 133 2 224-23" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 163c55-23 133 2 224-23" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M74 174l39 39 77-84" stroke="black" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="18" y="18" width="224" height="224" rx="56" mask="url(#mask-layer-wave)"/>
+    </g>
+    <text x="58" y="342" class="label">A. Layer Wave</text>
+    <text x="58" y="377" class="note">Closest to the reference: three spaces plus a soft done cue.</text>
+  </g>
+
+  <!-- B -->
+  <g transform="translate(652 205)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-partition-only">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="18" y="18" width="224" height="224" rx="56" fill="white"/>
+          <path d="M18 91c61-17 140 6 224-18" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 158c61-17 140 6 224-18" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="18" y="18" width="224" height="224" rx="56" mask="url(#mask-partition-only)"/>
+    </g>
+    <text x="58" y="342" class="label">B. Partition Only</text>
+    <text x="58" y="377" class="note">Most logo-like: the product idea without a checklist symbol.</text>
+  </g>
+
+  <!-- C -->
+  <g transform="translate(1208 205)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-open-stack">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="26" y="28" width="208" height="208" rx="48" fill="white"/>
+          <path d="M26 87c50-15 126 12 208-12" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M26 151c50-15 126 12 208-12" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="188" y="24" width="70" height="230" fill="black"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="26" y="28" width="208" height="208" rx="48" mask="url(#mask-open-stack)"/>
+      <circle class="mark" cx="210" cy="210" r="24"/>
+    </g>
+    <text x="58" y="342" class="label">C. Open Stack</text>
+    <text x="58" y="377" class="note">A more abstract mark: spaces continue beyond the frame.</text>
+  </g>
+
+  <!-- D -->
+  <g transform="translate(96 715)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-slab-mark">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="28" y="35" width="204" height="190" rx="48" fill="white"/>
+          <path d="M28 92h204" stroke="black" stroke-width="21" stroke-linecap="round"/>
+          <path d="M28 148h204" stroke="black" stroke-width="21" stroke-linecap="round"/>
+          <path d="M76 167l34 33 74-78" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="28" y="35" width="204" height="190" rx="48" mask="url(#mask-slab-mark)"/>
+    </g>
+    <text x="58" y="342" class="label">D. Slab Mark</text>
+    <text x="58" y="377" class="note">More geometric and app-icon ready, with stronger small-size clarity.</text>
+  </g>
+
+  <!-- E -->
+  <g transform="translate(652 715)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-tutu-space">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="25" y="30" width="210" height="200" rx="54" fill="white"/>
+          <path d="M25 93c62-16 140 10 210-14" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M25 154c62-16 140 10 210-14" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M89 159v22c0 29 19 48 46 48s46-19 46-48v-22" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="25" y="30" width="210" height="200" rx="54" mask="url(#mask-tutu-space)"/>
+    </g>
+    <text x="58" y="342" class="label">E. Tutu Space</text>
+    <text x="58" y="377" class="note">Hides a small U rhythm in the bottom partition.</text>
+  </g>
+
+  <!-- F -->
+  <g transform="translate(1208 715)">
+    <g transform="translate(132 52)">
+      <defs>
+        <mask id="mask-negative-tab">
+          <rect width="260" height="260" fill="black"/>
+          <rect x="20" y="24" width="220" height="216" rx="58" fill="white"/>
+          <path d="M20 92c56-26 142 3 220-24" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 160c56-26 142 3 220-24" stroke="black" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="85" cy="181" r="18" fill="black"/>
+          <circle cx="130" cy="181" r="18" fill="black"/>
+          <circle cx="175" cy="181" r="18" fill="black"/>
+        </mask>
+      </defs>
+      <rect class="mark" x="20" y="24" width="220" height="216" rx="58" mask="url(#mask-negative-tab)"/>
+    </g>
+    <text x="58" y="342" class="label">F. Todo Field</text>
+    <text x="58" y="377" class="note">Several tasks living inside one partition, still kept symbolic.</text>
+  </g>
+
+  <line x1="96" y1="1218" x2="1704" y2="1218" stroke="#D9D9D9"/>
+  <text x="96" y="1260" class="note">My read: B is the cleanest brand mark; A is the best bridge from the colored reference; E is the strongest Tutu-specific direction.</text>
+</svg>
