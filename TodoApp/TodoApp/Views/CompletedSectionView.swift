@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct CompletedSectionView: View {
+    @Environment(\.interfaceDensity) private var density
+
     let groups: [CompletedTaskGroup]
     let onSaveTask: (String, String) -> Void
     let onAddChildTask: (String, String) -> Void
@@ -9,19 +11,19 @@ struct CompletedSectionView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
-                HStack(alignment: .top, spacing: DesignTokens.Spacing.cardHeaderGap) {
+            VStack(spacing: DesignTokens.Spacing.scaledCardHeaderRuleGap(in: density)) {
+                HStack(alignment: .top, spacing: DesignTokens.Spacing.scaledCardHeaderGap(in: density)) {
                     LiquidGlassTag(text: "Completed")
 
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
+                .padding(.leading, DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density))
 
                 headerRule
             }
-            .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-            .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-            .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
+            .padding(.horizontal, DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density))
+            .padding(.top, DesignTokens.Spacing.scaledCardHeaderTop(in: density))
+            .padding(.bottom, DesignTokens.Spacing.scaledCardHeaderBottom(in: density))
 
             // Completed tasks list
             if groups.isEmpty {
@@ -29,7 +31,7 @@ struct CompletedSectionView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        LazyVStack(spacing: 6) {
+                        LazyVStack(spacing: DesignTokens.scaled(6, in: density)) {
                             ForEach(groups) { group in
                                 VStack(spacing: 0) {
                                     TaskItemView(
@@ -62,16 +64,16 @@ struct CompletedSectionView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(.top, DesignTokens.Spacing.sectionBodyTop)
+                    .padding(.top, DesignTokens.Spacing.scaledSectionBodyTop(in: density))
                 }
             }
         }
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous))
         .overlay {
             if #unavailable(macOS 26.0) {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             }
         }
         .shadow(
@@ -82,7 +84,7 @@ struct CompletedSectionView: View {
     }
 
     private var cardBackground: some View {
-        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
 
         return ZStack {
             if #available(macOS 26.0, *) {
@@ -91,7 +93,7 @@ struct CompletedSectionView: View {
                     .environment(\.appearsActive, true)
 
                 cardShape
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             } else {
                 ZStack {
                     cardShape
@@ -119,7 +121,7 @@ struct CompletedSectionView: View {
     private var headerRule: some View {
         Rectangle()
             .fill(DesignTokens.ColorRole.headerRule)
-            .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
+            .frame(height: DesignTokens.Stroke.scaledHeaderRuleLineWidth(in: density))
     }
 }
 

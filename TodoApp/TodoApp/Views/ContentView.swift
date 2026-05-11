@@ -3,6 +3,7 @@ import AppKit
 
 struct ContentView: View {
     @Environment(TodoViewModel.self) private var viewModel
+    @Environment(\.interfaceDensity) private var density
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -14,16 +15,19 @@ struct ContentView: View {
                 LaunchEmptyStateView {
                     viewModel.addPartition()
                 }
-                .padding(.horizontal, DesignTokens.Spacing.screenHorizontalInset)
-                .padding(.vertical, DesignTokens.Spacing.screenVerticalInset)
+                .padding(.horizontal, DesignTokens.Spacing.scaledScreenHorizontalInset(in: density))
+                .padding(.vertical, DesignTokens.Spacing.scaledScreenVerticalInset(in: density))
             } else {
                 GeometryReader { geometry in
-                    let topInset = DesignTokens.Spacing.screenTopInset
-                    let bottomInset = DesignTokens.Spacing.screenVerticalInset
+                    let topInset = DesignTokens.Spacing.scaledScreenTopInset(in: density)
+                    let bottomInset = DesignTokens.Spacing.scaledScreenVerticalInset(in: density)
                     let contentHeight = max(0, geometry.size.height - topInset - bottomInset)
                     let layout = PartitionAreaLayout.calculate(
                         contentHeight: contentHeight,
-                        partitionHeights: viewModel.partitions.map(\.height)
+                        partitionHeights: viewModel.partitions.map(\.height),
+                        partitionMinHeight: DesignTokens.Size.scaledPartitionMinHeight(in: density),
+                        completedMinHeight: DesignTokens.Size.scaledCompletedMinHeight(in: density),
+                        handleGap: DesignTokens.Spacing.scaledCardGap(in: density)
                     )
 
                     VStack(spacing: 0) {
@@ -48,14 +52,14 @@ struct ContentView: View {
                         )
                         .frame(height: layout.completedHeight)
                     }
-                    .padding(.horizontal, DesignTokens.Spacing.screenHorizontalInset)
+                    .padding(.horizontal, DesignTokens.Spacing.scaledScreenHorizontalInset(in: density))
                     .padding(.top, topInset)
                     .padding(.bottom, bottomInset)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
             }
         }
-        .font(DesignTokens.Typography.body)
+        .font(DesignTokens.Typography.body(in: density))
         .background(
             WindowChromeController(hoverHeight: DesignTokens.Spacing.windowChromeHoverHeight)
         )
@@ -140,7 +144,7 @@ struct ContentView: View {
                         viewModel.savePartitionEdit(id: partition.id, name: name)
                     }
                 )
-                .frame(height: max(DesignTokens.Size.partitionMinHeight, partition.height))
+                .frame(height: max(DesignTokens.Size.scaledPartitionMinHeight(in: density), partition.height))
                 .clipped()
 
                 PartitionDragHandle { delta in
@@ -150,7 +154,7 @@ struct ContentView: View {
                         maxTotalPartitionHeights: maxTotalPartitionHeights
                     )
                 }
-                .frame(height: DesignTokens.Spacing.cardGap)
+                .frame(height: DesignTokens.Spacing.scaledCardGap(in: density))
             }
         }
     }
@@ -197,40 +201,42 @@ struct PartitionAreaLayout {
 }
 
 private struct LaunchEmptyStateView: View {
+    @Environment(\.interfaceDensity) private var density
+
     let onCreatePartition: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 14) {
+        VStack(spacing: DesignTokens.scaled(24, in: density)) {
+            VStack(spacing: DesignTokens.scaled(14, in: density)) {
                 ZStack {
                     Circle()
                         .fill(.white.opacity(0.5))
-                        .frame(width: 72, height: 72)
+                        .frame(width: DesignTokens.scaled(72, in: density), height: DesignTokens.scaled(72, in: density))
 
                     Image(systemName: "square.stack.3d.up.fill")
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(.system(size: DesignTokens.scaled(28, in: density), weight: .semibold))
                         .foregroundStyle(DesignTokens.ColorRole.primaryText.opacity(0.88))
                 }
 
-                VStack(spacing: 8) {
+                VStack(spacing: DesignTokens.scaled(8, in: density)) {
                     Text("Start with your first partition")
-                        .font(DesignTokens.Typography.screenSubtitle)
+                        .font(DesignTokens.Typography.screenSubtitle(in: density))
                         .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
                     Text("Sidebar Todo is ready. Create a partition like Work or Life, then start adding tasks, subtasks, tags, and due dates. Your data now lives in Application Support, so replacing the app won't clear your list.")
-                        .font(DesignTokens.Typography.body)
+                        .font(DesignTokens.Typography.body(in: density))
                         .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                         .multilineTextAlignment(.center)
-                        .frame(maxWidth: 420)
+                        .frame(maxWidth: DesignTokens.scaled(420, in: density))
                 }
             }
 
             Button(action: onCreatePartition) {
                 Text("Create First Partition")
-                    .font(DesignTokens.Typography.bodyMedium)
+                    .font(DesignTokens.Typography.bodyMedium(in: density))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, DesignTokens.scaled(18, in: density))
+                    .padding(.vertical, DesignTokens.scaled(10, in: density))
                     .background(
                         Capsule()
                             .fill(DesignTokens.ColorRole.primaryText)
@@ -243,7 +249,7 @@ private struct LaunchEmptyStateView: View {
     }
 
     private var emptyStateCard: some View {
-        let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
 
         return ZStack {
             if #available(macOS 26.0, *) {
@@ -252,7 +258,7 @@ private struct LaunchEmptyStateView: View {
                     .environment(\.appearsActive, true)
 
                 shape
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             } else {
                 shape
                     .fill(
@@ -267,7 +273,7 @@ private struct LaunchEmptyStateView: View {
                     )
 
                 shape
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             }
         }
         .shadow(
@@ -314,30 +320,45 @@ private struct WindowGlassBackground: NSViewRepresentable {
 // MARK: - Partition Drag Handle
 
 struct PartitionDragHandle: View {
+    @Environment(\.interfaceDensity) private var density
+
     let onDrag: (CGFloat) -> Void
 
     var body: some View {
-        PartitionDragHandleView(onDrag: onDrag)
+        PartitionDragHandleView(
+            handleHeight: DesignTokens.Size.scaledResizeHandleHeight(in: density),
+            onDrag: onDrag
+        )
             .frame(maxWidth: .infinity)
     }
 }
 
 private struct PartitionDragHandleView: NSViewRepresentable {
+    let handleHeight: CGFloat
     let onDrag: (CGFloat) -> Void
 
     func makeNSView(context: Context) -> PartitionDragHandleNSView {
         let view = PartitionDragHandleNSView()
+        view.handleHeight = handleHeight
         view.onDrag = onDrag
         return view
     }
 
     func updateNSView(_ nsView: PartitionDragHandleNSView, context: Context) {
+        nsView.handleHeight = handleHeight
         nsView.onDrag = onDrag
         nsView.updateAppearance()
+        nsView.needsLayout = true
     }
 }
 
 private final class PartitionDragHandleNSView: NSView {
+    var handleHeight: CGFloat = DesignTokens.Size.resizeHandleHeight {
+        didSet {
+            barLayer.cornerRadius = handleHeight / 2
+            needsLayout = true
+        }
+    }
     var onDrag: (CGFloat) -> Void = { _ in }
 
     private let barLayer = CALayer()
@@ -355,7 +376,7 @@ private final class PartitionDragHandleNSView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.clear.cgColor
-        barLayer.cornerRadius = DesignTokens.Size.resizeHandleHeight / 2
+        barLayer.cornerRadius = handleHeight / 2
         layer?.addSublayer(barLayer)
         updateAppearance()
     }
@@ -367,7 +388,7 @@ private final class PartitionDragHandleNSView: NSView {
 
     override func layout() {
         super.layout()
-        let barHeight = DesignTokens.Size.resizeHandleHeight
+        let barHeight = handleHeight
         barLayer.frame = CGRect(
             x: 0,
             y: (bounds.height - barHeight) / 2,

@@ -33,6 +33,7 @@ private final class InlineEditingTextField: NSTextField {
 
 private struct InlineTaskNameEditor: NSViewRepresentable {
     @Binding var text: String
+    let density: InterfaceDensity
     let isEditing: Bool
     let onCommit: (String) -> Void
     let onCancel: () -> Void
@@ -101,11 +102,12 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
     }
 
     private var taskNameNSFont: NSFont {
-        if let customFont = NSFont(name: "PingFangSC-Regular", size: 15) {
+        let fontSize = DesignTokens.Typography.bodySize(in: density)
+        if let customFont = NSFont(name: "PingFangSC-Regular", size: fontSize) {
             return customFont
         }
 
-        return .systemFont(ofSize: 15, weight: .regular)
+        return .systemFont(ofSize: fontSize, weight: .regular)
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
@@ -241,12 +243,18 @@ enum TodoCursors {
 
 enum TaskItemLeadingControlLayout {
     static func checkboxLeadingInset(
-        sectionPaddingHorizontal: CGFloat = DesignTokens.Spacing.sectionPaddingHorizontal,
-        partitionHeaderContentLeadingInset: CGFloat = DesignTokens.Spacing.partitionHeaderContentLeadingInset,
-        rowHorizontal: CGFloat = DesignTokens.Spacing.rowHorizontal,
-        checkboxTapTarget: CGFloat = DesignTokens.Size.checkboxTapTarget,
-        checkbox: CGFloat = DesignTokens.Size.checkbox
+        density: InterfaceDensity = .regular,
+        sectionPaddingHorizontal: CGFloat? = nil,
+        partitionHeaderContentLeadingInset: CGFloat? = nil,
+        rowHorizontal: CGFloat? = nil,
+        checkboxTapTarget: CGFloat? = nil,
+        checkbox: CGFloat? = nil
     ) -> CGFloat {
+        let sectionPaddingHorizontal = sectionPaddingHorizontal ?? DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density)
+        let partitionHeaderContentLeadingInset = partitionHeaderContentLeadingInset ?? DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density)
+        let rowHorizontal = rowHorizontal ?? DesignTokens.Spacing.scaledRowHorizontal(in: density)
+        let checkboxTapTarget = checkboxTapTarget ?? DesignTokens.Size.scaledCheckboxTapTarget(in: density)
+        let checkbox = checkbox ?? DesignTokens.Size.scaledCheckbox(in: density)
         let checkboxVisualInset = (checkboxTapTarget - checkbox) / 2
         return sectionPaddingHorizontal
             + partitionHeaderContentLeadingInset
@@ -256,12 +264,17 @@ enum TaskItemLeadingControlLayout {
 
     static func starMarkerHitRegionLeadingInset(
         depth: Int,
-        rowHorizontal: CGFloat = DesignTokens.Spacing.rowHorizontal,
-        childTaskIndent: CGFloat = DesignTokens.Spacing.childTaskIndent,
-        checkboxLeadingInset: CGFloat = checkboxLeadingInset(),
-        starMarkerTapTargetWidth: CGFloat = DesignTokens.Size.starMarkerTapTargetWidth
+        density: InterfaceDensity = .regular,
+        rowHorizontal: CGFloat? = nil,
+        childTaskIndent: CGFloat? = nil,
+        checkboxLeadingInsetOverride: CGFloat? = nil,
+        starMarkerTapTargetWidth: CGFloat? = nil
     ) -> CGFloat {
-        rowHorizontal
+        let rowHorizontal = rowHorizontal ?? DesignTokens.Spacing.scaledRowHorizontal(in: density)
+        let childTaskIndent = childTaskIndent ?? DesignTokens.Spacing.scaledChildTaskIndent(in: density)
+        let checkboxLeadingInset = checkboxLeadingInsetOverride ?? checkboxLeadingInset(density: density)
+        let starMarkerTapTargetWidth = starMarkerTapTargetWidth ?? DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density)
+        return rowHorizontal
             + (CGFloat(depth) * childTaskIndent)
             + checkboxLeadingInset
             - starMarkerTapTargetWidth
@@ -271,21 +284,44 @@ enum TaskItemLeadingControlLayout {
 enum DueDateLabelLayout {
     static let textWidth: CGFloat = DesignTokens.Size.dueDateTextContentWidth
     static let textTrailingInset: CGFloat = DesignTokens.Spacing.dueDateTagHorizontal
+    static let renderingAllowance: CGFloat = 4
 
     static var labelWidth: CGFloat {
         textWidth + (textTrailingInset * 2)
     }
 
     static func tagWidth(for text: String) -> CGFloat {
-        textWidth(for: text) + (textTrailingInset * 2)
+        textWidth(for: text) + (textTrailingInset * 2) + renderingAllowance
+    }
+
+    static func scaledTextTrailingInset(in density: InterfaceDensity) -> CGFloat {
+        DesignTokens.Spacing.scaledDueDateTagHorizontal(in: density)
+    }
+
+    static func tagWidth(for text: String, density: InterfaceDensity) -> CGFloat {
+        textWidth(for: text, density: density)
+            + (scaledTextTrailingInset(in: density) * 2)
+            + DesignTokens.scaled(renderingAllowance, in: density)
     }
 
     static func plainWidth(for text: String) -> CGFloat {
-        textWidth(for: text) + textTrailingInset
+        textWidth(for: text) + textTrailingInset + renderingAllowance
+    }
+
+    static func plainWidth(for text: String, density: InterfaceDensity) -> CGFloat {
+        textWidth(for: text, density: density)
+            + scaledTextTrailingInset(in: density)
+            + DesignTokens.scaled(renderingAllowance, in: density)
     }
 
     private static func textWidth(for text: String) -> CGFloat {
         let font = NSFont(name: "PingFangSC-Regular", size: 11) ?? .systemFont(ofSize: 11, weight: .regular)
+        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
+    }
+
+    private static func textWidth(for text: String, density: InterfaceDensity) -> CGFloat {
+        let fontSize = DesignTokens.Typography.dueDateTagSize(in: density)
+        let font = NSFont(name: "PingFangSC-Regular", size: fontSize) ?? .systemFont(ofSize: fontSize, weight: .regular)
         return ceil((text as NSString).size(withAttributes: [.font: font]).width)
     }
 }
@@ -293,21 +329,27 @@ enum DueDateLabelLayout {
 enum TaskRowTrailingLayout {
     static func contentGap(
         hasDueDate: Bool,
-        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
-        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap
+        density: InterfaceDensity = .regular,
+        dueDateGap: CGFloat? = nil,
+        unsetDueDateGap: CGFloat? = nil
     ) -> CGFloat {
-        hasDueDate ? dueDateGap : unsetDueDateGap
+        let dueDateGap = dueDateGap ?? DesignTokens.Spacing.scaledTaskDueDateGap(in: density)
+        let unsetDueDateGap = unsetDueDateGap ?? DesignTokens.Spacing.scaledTaskUnsetDueDateGap(in: density)
+        return hasDueDate ? dueDateGap : unsetDueDateGap
     }
 
     static func leadingPadding(
         hasDueDate: Bool,
-        rowSpacing: CGFloat = DesignTokens.Spacing.taskLeadingGap,
-        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
-        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap
+        density: InterfaceDensity = .regular,
+        rowSpacing: CGFloat? = nil,
+        dueDateGap: CGFloat? = nil,
+        unsetDueDateGap: CGFloat? = nil
     ) -> CGFloat {
-        max(
+        let rowSpacing = rowSpacing ?? DesignTokens.Spacing.scaledTaskLeadingGap(in: density)
+        return max(
             contentGap(
                 hasDueDate: hasDueDate,
+                density: density,
                 dueDateGap: dueDateGap,
                 unsetDueDateGap: unsetDueDateGap
             ) - rowSpacing,
@@ -318,19 +360,23 @@ enum TaskRowTrailingLayout {
     static func reservedWidth(
         hasDueDate: Bool,
         dueDateContentWidth: CGFloat,
-        rowSpacing: CGFloat = DesignTokens.Spacing.taskLeadingGap,
-        dueDateGap: CGFloat = DesignTokens.Spacing.taskDueDateGap,
-        unsetDueDateGap: CGFloat = DesignTokens.Spacing.taskUnsetDueDateGap,
-        trailingControlWidth: CGFloat = DesignTokens.Size.trailingControl,
-        trailingInset: CGFloat = DesignTokens.Spacing.sectionPaddingHorizontal
-            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
-            - DesignTokens.Spacing.rowHorizontal
+        density: InterfaceDensity = .regular,
+        rowSpacing: CGFloat? = nil,
+        dueDateGap: CGFloat? = nil,
+        unsetDueDateGap: CGFloat? = nil,
+        trailingControlWidth: CGFloat? = nil,
+        trailingInset: CGFloat? = nil
     ) -> CGFloat {
+        let trailingControlWidth = trailingControlWidth ?? DesignTokens.Size.scaledTrailingControl(in: density)
+        let trailingInset = trailingInset ?? DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density)
+            + DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density)
+            - DesignTokens.Spacing.scaledRowHorizontal(in: density)
         let contentWidth = hasDueDate
             ? max(dueDateContentWidth, trailingControlWidth)
             : trailingControlWidth
         return leadingPadding(
             hasDueDate: hasDueDate,
+            density: density,
             rowSpacing: rowSpacing,
             dueDateGap: dueDateGap,
             unsetDueDateGap: unsetDueDateGap
@@ -566,6 +612,8 @@ enum StarMarkerPresentation {
 }
 
 struct TaskItemView: View {
+    @Environment(\.interfaceDensity) private var density
+
     let task: TodoTask
     let depth: Int
     let renderMode: TaskItemRenderMode
@@ -610,7 +658,7 @@ struct TaskItemView: View {
     }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledTaskLeadingGap(in: density)) {
             leadingControls
 
             taskContent
@@ -620,11 +668,11 @@ struct TaskItemView: View {
                 dueDateControl
             }
         }
-        .padding(.leading, CGFloat(depth) * DesignTokens.Spacing.childTaskIndent)
-        .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
-        .padding(.vertical, DesignTokens.Spacing.rowVertical)
+        .padding(.leading, CGFloat(depth) * DesignTokens.Spacing.scaledChildTaskIndent(in: density))
+        .padding(.horizontal, DesignTokens.Spacing.scaledRowHorizontal(in: density))
+        .padding(.vertical, DesignTokens.Spacing.scaledRowVertical(in: density))
         .background(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledRow(in: density), style: .continuous)
                 .fill(isHovering ? DesignTokens.ColorRole.rowHover : Color.clear)
         )
         .contentShape(Rectangle())
@@ -669,8 +717,8 @@ struct TaskItemView: View {
                     onClick: { onToggleStar(task.id) }
                 )
                 .frame(
-                    width: DesignTokens.Size.starMarkerTapTargetWidth,
-                    height: DesignTokens.Size.checkboxTapTarget
+                    width: DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density),
+                    height: DesignTokens.Size.scaledCheckboxTapTarget(in: density)
                 )
                 .padding(.leading, starMarkerHitRegionLeadingInset)
                 .frame(maxHeight: .infinity, alignment: .center)
@@ -686,16 +734,16 @@ struct TaskItemView: View {
         }
         .frame(
             width: max(
-                checkboxAlignedLeadingInset + DesignTokens.Size.checkboxTapTarget,
-                DesignTokens.Size.starMarkerTapTargetWidth
+                checkboxAlignedLeadingInset + DesignTokens.Size.scaledCheckboxTapTarget(in: density),
+                DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density)
             ),
-            height: DesignTokens.Size.checkboxTapTarget,
+            height: DesignTokens.Size.scaledCheckboxTapTarget(in: density),
             alignment: .leading
         )
     }
 
     private var taskContent: some View {
-        HStack(spacing: DesignTokens.Spacing.tagGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledTagGap(in: density)) {
             ZStack(alignment: .leading) {
                 renderedTaskSegments
                     .opacity(isEditing ? 0 : 1)
@@ -708,12 +756,13 @@ struct TaskItemView: View {
 
                 InlineTaskNameEditor(
                     text: $editingName,
+                    density: density,
                     isEditing: isEditing,
                     onCommit: commitRename,
                     onCancel: cancelRename
                 )
             }
-            .frame(height: DesignTokens.Size.inlineTextEditorHeight)
+            .frame(height: DesignTokens.Size.scaledInlineTextEditorHeight(in: density))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -727,7 +776,7 @@ struct TaskItemView: View {
                 switch segment {
                 case .text(let text):
                     Text(text)
-                        .font(DesignTokens.Typography.body)
+                        .font(DesignTokens.Typography.body(in: density))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .foregroundStyle(taskNameColor)
@@ -749,7 +798,7 @@ struct TaskItemView: View {
     private func trailingGap(after index: Int, segments: [TaskTextSegment]) -> CGFloat {
         guard index < segments.count - 1 else { return 0 }
         return segments[index].isTag || segments[index + 1].isTag
-            ? DesignTokens.Spacing.inlineTagTextGap
+            ? DesignTokens.Spacing.scaledInlineTagTextGap(in: density)
             : 0
     }
 
@@ -760,23 +809,23 @@ struct TaskItemView: View {
             onToggleComplete(task.id)
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCheckbox(in: density), style: .continuous)
                     .strokeBorder(
                         checkboxStrokeColor,
-                        lineWidth: DesignTokens.Stroke.checkboxLineWidth
+                        lineWidth: DesignTokens.Stroke.scaledCheckboxLineWidth(in: density)
                     )
-                    .frame(width: DesignTokens.Size.checkbox, height: DesignTokens.Size.checkbox)
+                    .frame(width: DesignTokens.Size.scaledCheckbox(in: density), height: DesignTokens.Size.scaledCheckbox(in: density))
                     .background(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.checkbox, style: .continuous)
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCheckbox(in: density), style: .continuous)
                             .fill(checkboxFillColor)
                     )
                 if task.isCompleted {
                     Image(systemName: "checkmark")
-                        .font(DesignTokens.Typography.checkmark)
+                        .font(DesignTokens.Typography.checkmark(in: density))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: DesignTokens.Size.checkboxTapTarget, height: DesignTokens.Size.checkboxTapTarget)
+            .frame(width: DesignTokens.Size.scaledCheckboxTapTarget(in: density), height: DesignTokens.Size.scaledCheckboxTapTarget(in: density))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -792,13 +841,13 @@ struct TaskItemView: View {
 
     @ViewBuilder
     private var starMarkerButton: some View {
-        let markerLeadingInset = DesignTokens.Spacing.starMarkerLeadingOffset
-        let hitTargetLeadingOffset = checkboxAlignedLeadingInset - DesignTokens.Size.starMarkerTapTargetWidth
-        let marker = RoundedRectangle(cornerRadius: DesignTokens.Radius.starMarker, style: .continuous)
+        let markerLeadingInset = DesignTokens.Spacing.scaledStarMarkerLeadingOffset(in: density)
+        let hitTargetLeadingOffset = checkboxAlignedLeadingInset - DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density)
+        let marker = RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledStarMarker(in: density), style: .continuous)
             .fill(starMarkerColor)
             .frame(
-                width: DesignTokens.Size.starMarkerWidth,
-                height: DesignTokens.Size.starMarkerHeight
+                width: DesignTokens.Size.scaledStarMarkerWidth(in: density),
+                height: DesignTokens.Size.scaledStarMarkerHeight(in: density)
             )
             .rotationEffect(.degrees(14))
         let hitTarget = ZStack(alignment: .leading) {
@@ -806,8 +855,8 @@ struct TaskItemView: View {
                 .offset(x: markerLeadingInset)
         }
             .frame(
-                width: DesignTokens.Size.starMarkerTapTargetWidth,
-                height: DesignTokens.Size.checkboxTapTarget,
+                width: DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density),
+                height: DesignTokens.Size.scaledCheckboxTapTarget(in: density),
                 alignment: .leading
             )
             .contentShape(Rectangle())
@@ -881,9 +930,9 @@ struct TaskItemView: View {
                     showDatePicker.toggle()
                 } label: {
                     Image(systemName: "calendar")
-                        .font(DesignTokens.Typography.icon)
+                        .font(DesignTokens.Typography.icon(in: density))
                         .foregroundStyle(isHoveringCalendar ? DesignTokens.ColorRole.primaryText : DesignTokens.ColorRole.secondaryText)
-                        .frame(width: DesignTokens.Size.trailingControl, height: DesignTokens.Size.trailingControl)
+                        .frame(width: DesignTokens.Size.scaledTrailingControl(in: density), height: DesignTokens.Size.scaledTrailingControl(in: density))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -913,10 +962,10 @@ struct TaskItemView: View {
 
     private func dueDateTag(text: String, background: Color) -> some View {
         dueDateText(text, color: DesignTokens.ColorRole.dueDateNeutralText)
-            .padding(.horizontal, DueDateLabelLayout.textTrailingInset)
-            .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
+            .padding(.horizontal, DueDateLabelLayout.scaledTextTrailingInset(in: density))
+            .padding(.vertical, DesignTokens.Spacing.scaledDueDateTagVertical(in: density))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledDueDateTag(in: density), style: .continuous)
                     .fill(background)
             )
     }
@@ -925,24 +974,25 @@ struct TaskItemView: View {
         let color = DesignTokens.ColorRole.secondaryText
 
         return dueDateText(text, color: color)
-            .padding(.horizontal, DueDateLabelLayout.textTrailingInset)
-            .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
+            .padding(.horizontal, DueDateLabelLayout.scaledTextTrailingInset(in: density))
+            .padding(.vertical, DesignTokens.Spacing.scaledDueDateTagVertical(in: density))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
-                    .strokeBorder(color, lineWidth: DesignTokens.Stroke.dueDateOutlineLineWidth)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledDueDateTag(in: density), style: .continuous)
+                    .strokeBorder(color, lineWidth: DesignTokens.Stroke.scaledDueDateOutlineLineWidth(in: density))
             )
     }
 
     private func plainDueDateText(_ text: String) -> some View {
         dueDateText(text, color: DesignTokens.ColorRole.secondaryText)
-            .padding(.trailing, DueDateLabelLayout.textTrailingInset)
+            .padding(.trailing, DueDateLabelLayout.scaledTextTrailingInset(in: density))
     }
 
     private func dueDateText(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(DesignTokens.Typography.dueDateTag)
+            .font(DesignTokens.Typography.dueDateTag(in: density))
             .foregroundStyle(color)
             .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     private var starMarkerColor: Color {
@@ -984,29 +1034,30 @@ struct TaskItemView: View {
     }
 
     private var checkboxAlignedLeadingInset: CGFloat {
-        TaskItemLeadingControlLayout.checkboxLeadingInset()
+        TaskItemLeadingControlLayout.checkboxLeadingInset(density: density)
     }
 
     private var starMarkerHitRegionLeadingInset: CGFloat {
-        TaskItemLeadingControlLayout.starMarkerHitRegionLeadingInset(depth: depth)
+        TaskItemLeadingControlLayout.starMarkerHitRegionLeadingInset(depth: depth, density: density)
     }
 
     private var dueDateTrailingInset: CGFloat {
-        DesignTokens.Spacing.sectionPaddingHorizontal
-            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
-            - DesignTokens.Spacing.rowHorizontal
+        DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density)
+            + DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density)
+            - DesignTokens.Spacing.scaledRowHorizontal(in: density)
     }
 
     private var dueDateReservedWidth: CGFloat {
         TaskRowTrailingLayout.reservedWidth(
             hasDueDate: task.dueDate != nil,
             dueDateContentWidth: dueDateContentWidth,
+            density: density,
             trailingInset: dueDateTrailingInset
         )
     }
 
     private var dueDateLeadingPadding: CGFloat {
-        TaskRowTrailingLayout.leadingPadding(hasDueDate: task.dueDate != nil)
+        TaskRowTrailingLayout.leadingPadding(hasDueDate: task.dueDate != nil, density: density)
     }
 
     private var dueDateContentWidth: CGFloat {
@@ -1016,9 +1067,9 @@ struct TaskItemView: View {
 
         switch daysFromToday {
         case ..<3:
-            return DueDateLabelLayout.tagWidth(for: formattedDate)
+            return DueDateLabelLayout.tagWidth(for: formattedDate, density: density)
         default:
-            return DueDateLabelLayout.plainWidth(for: formattedDate)
+            return DueDateLabelLayout.plainWidth(for: formattedDate, density: density)
         }
     }
 
@@ -1050,6 +1101,8 @@ private extension TaskTextSegment {
 // MARK: - Date Picker Popover
 
 private struct DatePickerPopover: View {
+    @Environment(\.interfaceDensity) private var density
+
     let currentDate: Date?
     let onSelect: (Date) -> Void
     let onRemove: (() -> Void)?
@@ -1075,7 +1128,7 @@ private struct DatePickerPopover: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignTokens.scaled(10, in: density)) {
             calendarHeader
             weekdayHeader
             calendarGrid
@@ -1095,19 +1148,19 @@ private struct DatePickerPopover: View {
                         ? DesignTokens.ColorRole.removeDateHover
                         : DesignTokens.ColorRole.removeDate
                 )
-                .font(DesignTokens.Typography.micro)
+                .font(DesignTokens.Typography.micro(in: density))
                 .onHover { isHoveringRemoveDate = $0 }
             }
         }
-        .padding(.horizontal, DesignTokens.Spacing.calendarPopoverHorizontal)
-        .padding(.vertical, DesignTokens.Spacing.calendarPopoverVertical)
-        .frame(width: DesignTokens.Size.datePopoverWidth)
+        .padding(.horizontal, DesignTokens.Spacing.scaledCalendarPopoverHorizontal(in: density))
+        .padding(.vertical, DesignTokens.Spacing.scaledCalendarPopoverVertical(in: density))
+        .frame(width: DesignTokens.Size.scaledDatePopoverWidth(in: density))
     }
 
     private var calendarHeader: some View {
-        HStack(spacing: DesignTokens.Spacing.calendarHeaderControlGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledCalendarHeaderControlGap(in: density)) {
             Text(monthTitle(for: displayedMonth))
-                .font(DesignTokens.Typography.bodyMedium)
+                .font(DesignTokens.Typography.bodyMedium(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
             Spacer()
@@ -1125,10 +1178,10 @@ private struct DatePickerPopover: View {
     private var weekdayHeader: some View {
         let labels = reorderedWeekdaySymbols()
 
-        return HStack(spacing: DesignTokens.Spacing.calendarGridGap) {
+        return HStack(spacing: DesignTokens.Spacing.scaledCalendarGridGap(in: density)) {
             ForEach(labels, id: \.self) { label in
                 Text(label)
-                    .font(DesignTokens.Typography.micro)
+                    .font(DesignTokens.Typography.micro(in: density))
                     .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                     .frame(maxWidth: .infinity)
             }
@@ -1138,10 +1191,10 @@ private struct DatePickerPopover: View {
     private var calendarGrid: some View {
         LazyVGrid(
             columns: Array(
-                repeating: GridItem(.flexible(), spacing: DesignTokens.Spacing.calendarGridGap),
+                repeating: GridItem(.flexible(), spacing: DesignTokens.Spacing.scaledCalendarGridGap(in: density)),
                 count: 7
             ),
-            spacing: DesignTokens.Spacing.calendarGridGap
+            spacing: DesignTokens.Spacing.scaledCalendarGridGap(in: density)
         ) {
             ForEach(dayCells()) { day in
                 Button {
@@ -1150,15 +1203,15 @@ private struct DatePickerPopover: View {
                     onSelect(normalized)
                 } label: {
                     Text(day.label)
-                        .font(DesignTokens.Typography.bodyMedium)
+                        .font(DesignTokens.Typography.bodyMedium(in: density))
                         .foregroundStyle(dayTextColor(for: day))
                         .frame(maxWidth: .infinity)
-                        .frame(height: DesignTokens.Size.calendarDayCell)
+                        .frame(height: DesignTokens.Size.scaledCalendarDayCell(in: density))
                         .background(dayBackground(for: day))
                         .overlay(dayOutline(for: day))
                         .contentShape(
                             RoundedRectangle(
-                                cornerRadius: DesignTokens.Radius.calendarDay,
+                                cornerRadius: DesignTokens.Radius.scaledCalendarDay(in: density),
                                 style: .continuous
                             )
                         )
@@ -1176,7 +1229,7 @@ private struct DatePickerPopover: View {
         let isSelected = calendar.isDate(day.date, inSameDayAs: selectedDate)
         let isHovered = hoveredDay.map { calendar.isDate($0, inSameDayAs: day.date) } ?? false
 
-        RoundedRectangle(cornerRadius: DesignTokens.Radius.calendarDay, style: .continuous)
+        RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCalendarDay(in: density), style: .continuous)
             .fill(
                 isSelected
                     ? DesignTokens.ColorRole.dueDateUrgentTag
@@ -1189,12 +1242,12 @@ private struct DatePickerPopover: View {
         let isSelected = calendar.isDate(day.date, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day.date)
 
-        RoundedRectangle(cornerRadius: DesignTokens.Radius.calendarDay, style: .continuous)
+        RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCalendarDay(in: density), style: .continuous)
             .stroke(
                 isToday && !isSelected
                     ? DesignTokens.ColorRole.calendarTodayStroke
                     : Color.clear,
-                lineWidth: 1
+                lineWidth: DesignTokens.scaled(1, in: density)
             )
     }
 
@@ -1211,15 +1264,15 @@ private struct DatePickerPopover: View {
     private func monthButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(DesignTokens.Typography.micro)
+                .font(DesignTokens.Typography.micro(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                 .frame(
-                    width: DesignTokens.Size.calendarNavControl,
-                    height: DesignTokens.Size.calendarNavControl
+                    width: DesignTokens.Size.scaledCalendarNavControl(in: density),
+                    height: DesignTokens.Size.scaledCalendarNavControl(in: density)
                 )
                 .background(
                     RoundedRectangle(
-                        cornerRadius: DesignTokens.Radius.calendarNavButton,
+                        cornerRadius: DesignTokens.Radius.scaledCalendarNavButton(in: density),
                         style: .continuous
                     )
                     .fill(DesignTokens.ColorRole.calendarHover)

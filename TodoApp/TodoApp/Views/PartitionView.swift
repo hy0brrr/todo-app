@@ -80,6 +80,7 @@ private final class InlineEditingTextField: NSTextField {
 
 private struct InlinePartitionTitleEditor: NSViewRepresentable {
     @Binding var text: String
+    let density: InterfaceDensity
     let isEditing: Bool
     let onCommit: () -> Void
     let onCancel: () -> Void
@@ -147,11 +148,12 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
     }
 
     private var partitionTitleNSFont: NSFont {
-        if let customFont = NSFont(name: "PPNeueMontrealVariable-SemiBold", size: 16) {
+        let fontSize = DesignTokens.Typography.partitionHeaderTitleSize(in: density)
+        if let customFont = NSFont(name: "PPNeueMontrealVariable-SemiBold", size: fontSize) {
             return customFont
         }
 
-        return .systemFont(ofSize: 16, weight: .bold)
+        return .systemFont(ofSize: fontSize, weight: .bold)
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
@@ -223,6 +225,8 @@ private struct InlinePartitionTitleEditor: NSViewRepresentable {
 }
 
 struct PartitionView: View {
+    @Environment(\.interfaceDensity) private var density
+
     let partition: Partition
     let taskGroups: [ActiveTaskGroup]
     let isEditing: Bool
@@ -291,7 +295,7 @@ struct PartitionView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(.top, DesignTokens.Spacing.sectionBodyTop)
+                    .padding(.top, DesignTokens.Spacing.scaledSectionBodyTop(in: density))
                 }
             }
 
@@ -301,11 +305,11 @@ struct PartitionView: View {
             addTaskBar
         }
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous))
         .overlay {
             if #unavailable(macOS 26.0) {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             }
         }
         .shadow(
@@ -329,34 +333,34 @@ struct PartitionView: View {
     }
 
     private var partitionHeader: some View {
-        VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
-            HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
+        VStack(spacing: DesignTokens.Spacing.scaledCardHeaderRuleGap(in: density)) {
+            HStack(alignment: .center, spacing: DesignTokens.Spacing.scaledCardHeaderGap(in: density)) {
                 partitionTitleContent
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
+            .padding(.leading, DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density))
 
             headerRule
         }
-        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-        .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-        .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
+        .padding(.horizontal, DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density))
+        .padding(.top, DesignTokens.Spacing.scaledCardHeaderTop(in: density))
+        .padding(.bottom, DesignTokens.Spacing.scaledCardHeaderBottom(in: density))
     }
 
     private var headerRule: some View {
         Rectangle()
             .fill(DesignTokens.ColorRole.headerRule)
-            .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
+            .frame(height: DesignTokens.Stroke.scaledHeaderRuleLineWidth(in: density))
     }
 
     private var partitionTitleContent: some View {
-        HStack(spacing: DesignTokens.Spacing.partitionTitleInlineGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledPartitionTitleInlineGap(in: density)) {
             PartitionTitleIcon()
-                .frame(height: DesignTokens.Size.partitionTitleRowHeight)
+                .frame(height: DesignTokens.Size.scaledPartitionTitleRowHeight(in: density))
                 .offset(x: DesignTokens.Spacing.partitionTitleIconOpticalOffsetX)
             ZStack(alignment: .leading) {
                 Text(partition.name.isEmpty ? "Untitled" : partition.name)
-                    .font(DesignTokens.Typography.partitionHeaderTitle)
+                    .font(DesignTokens.Typography.partitionHeaderTitle(in: density))
                     .foregroundStyle(DesignTokens.ColorRole.primaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -369,25 +373,26 @@ struct PartitionView: View {
 
                 InlinePartitionTitleEditor(
                     text: $editingTitle,
+                    density: density,
                     isEditing: isEditingTitle,
                     onCommit: commitTitleEdit,
                     onCancel: cancelTitleEdit
                 )
             }
-            .frame(height: DesignTokens.Size.partitionTitleRowHeight)
+            .frame(height: DesignTokens.Size.scaledPartitionTitleRowHeight(in: density))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: DesignTokens.Size.partitionTitleRowHeight, alignment: .center)
+        .frame(height: DesignTokens.Size.scaledPartitionTitleRowHeight(in: density), alignment: .center)
     }
 
     private var addTaskBar: some View {
-        HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledTaskLeadingGap(in: density)) {
             Image(systemName: "plus")
-                .font(DesignTokens.Typography.icon)
+                .font(DesignTokens.Typography.icon(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .frame(
-                    width: DesignTokens.Size.checkboxTapTarget,
-                    height: DesignTokens.Size.checkboxTapTarget
+                    width: DesignTokens.Size.scaledCheckboxTapTarget(in: density),
+                    height: DesignTokens.Size.scaledCheckboxTapTarget(in: density)
                 )
                 .offset(x: DesignTokens.Spacing.addTaskPlusOpticalOffsetX)
 
@@ -398,7 +403,7 @@ struct PartitionView: View {
                 .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
             )
                 .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
+                .font(DesignTokens.Typography.body(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .onSubmit {
                     let trimmed = newTaskName.trimmingCharacters(in: .whitespaces)
@@ -407,40 +412,40 @@ struct PartitionView: View {
                     newTaskName = ""
                 }
         }
-        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density))
+        .padding(.vertical, DesignTokens.scaled(6, in: density))
         .background(DesignTokens.ColorRole.footerBackground)
     }
 
     @ViewBuilder
     private func inlineChildDraftRow(parentTaskId: String) -> some View {
-        HStack(spacing: DesignTokens.Spacing.taskLeadingGap) {
+        HStack(spacing: DesignTokens.Spacing.scaledTaskLeadingGap(in: density)) {
             Image(systemName: "plus")
-                .font(DesignTokens.Typography.icon)
+                .font(DesignTokens.Typography.icon(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .frame(
-                    width: DesignTokens.Size.checkboxTapTarget,
-                    height: DesignTokens.Size.checkboxTapTarget
+                    width: DesignTokens.Size.scaledCheckboxTapTarget(in: density),
+                    height: DesignTokens.Size.scaledCheckboxTapTarget(in: density)
                 )
                 .padding(.leading, checkboxAlignedLeadingInset)
-                .frame(width: leadingControlWidth, height: DesignTokens.Size.checkboxTapTarget, alignment: .leading)
+                .frame(width: leadingControlWidth, height: DesignTokens.Size.scaledCheckboxTapTarget(in: density), alignment: .leading)
                 .offset(x: DesignTokens.Spacing.addTaskPlusOpticalOffsetX)
 
             TextField("", text: $childDraftText, prompt: Text("Add subtask with [tag]")
                 .foregroundStyle(DesignTokens.ColorRole.tertiaryText))
                 .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
+                .font(DesignTokens.Typography.body(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 .focused($focusedChildDraftParentTaskId, equals: parentTaskId)
                 .onSubmit {
                     createInlineChildTask()
                 }
         }
-        .padding(.leading, DesignTokens.Spacing.childTaskIndent)
-        .padding(.horizontal, DesignTokens.Spacing.rowHorizontal)
-        .padding(.vertical, DesignTokens.Spacing.rowVertical)
+        .padding(.leading, DesignTokens.Spacing.scaledChildTaskIndent(in: density))
+        .padding(.horizontal, DesignTokens.Spacing.scaledRowHorizontal(in: density))
+        .padding(.vertical, DesignTokens.Spacing.scaledRowVertical(in: density))
         .background(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledRow(in: density), style: .continuous)
                 .fill(Color.clear)
         )
         .onAppear {
@@ -451,7 +456,7 @@ struct PartitionView: View {
     }
 
     private var cardBackground: some View {
-        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+        let cardShape = RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
 
         return ZStack {
             if #available(macOS 26.0, *) {
@@ -460,7 +465,7 @@ struct PartitionView: View {
                     .environment(\.appearsActive, true)
 
                 cardShape
-                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.cardLineWidth)
+                    .strokeBorder(DesignTokens.ColorRole.cardBorder, lineWidth: DesignTokens.Stroke.scaledCardLineWidth(in: density))
             } else {
                 ZStack {
                     cardShape
@@ -543,16 +548,16 @@ struct PartitionView: View {
 
     private var leadingControlWidth: CGFloat {
         return max(
-            checkboxAlignedLeadingInset + DesignTokens.Size.checkboxTapTarget,
-            DesignTokens.Size.starMarkerTapTargetWidth
+            checkboxAlignedLeadingInset + DesignTokens.Size.scaledCheckboxTapTarget(in: density),
+            DesignTokens.Size.scaledStarMarkerTapTargetWidth(in: density)
         )
     }
 
     private var checkboxAlignedLeadingInset: CGFloat {
-        let checkboxVisualInset = (DesignTokens.Size.checkboxTapTarget - DesignTokens.Size.checkbox) / 2
-        return DesignTokens.Spacing.sectionPaddingHorizontal
-            + DesignTokens.Spacing.partitionHeaderContentLeadingInset
-            - DesignTokens.Spacing.rowHorizontal
+        let checkboxVisualInset = (DesignTokens.Size.scaledCheckboxTapTarget(in: density) - DesignTokens.Size.scaledCheckbox(in: density)) / 2
+        return DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density)
+            + DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density)
+            - DesignTokens.Spacing.scaledRowHorizontal(in: density)
             - checkboxVisualInset
     }
 }

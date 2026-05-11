@@ -16,6 +16,13 @@ final class DueDateLabelLayoutTests: XCTestCase {
         )
     }
 
+    func testDueDateTagsReserveRenderingAllowanceBeyondMeasuredText() {
+        XCTAssertGreaterThan(
+            DueDateLabelLayout.tagWidth(for: "Due Yesterday"),
+            DueDateLabelLayout.labelWidth
+        )
+    }
+
     func testRowsWithoutDueDateReserveOnlyCalendarControlWidth() {
         XCTAssertEqual(
             TaskRowTrailingLayout.reservedWidth(hasDueDate: false, dueDateContentWidth: 999),

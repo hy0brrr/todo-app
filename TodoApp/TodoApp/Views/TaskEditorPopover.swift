@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct TaskEditorPopover: View {
+    @Environment(\.interfaceDensity) private var density
+
     let title: String
     let saveLabel: String
     let initialText: String
@@ -23,24 +25,24 @@ struct TaskEditorPopover: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.editorSectionGap) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.scaledEditorSectionGap(in: density)) {
             Text(title)
-                .font(DesignTokens.Typography.captionStrong)
+                .font(DesignTokens.Typography.captionStrong(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
             TextField("Task name [tag]", text: $text)
                 .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
-                .padding(.horizontal, DesignTokens.Spacing.inputHorizontal)
-                .padding(.vertical, DesignTokens.Spacing.inputVertical)
+                .font(DesignTokens.Typography.body(in: density))
+                .padding(.horizontal, DesignTokens.Spacing.scaledInputHorizontal(in: density))
+                .padding(.vertical, DesignTokens.Spacing.scaledInputVertical(in: density))
                 .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.field, style: .continuous)
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledField(in: density), style: .continuous)
                         .fill(DesignTokens.ColorRole.inputBackground)
                 )
                 .onSubmit(save)
 
             Text("Use [tag] to create tags inline.")
-                .font(DesignTokens.Typography.micro)
+                .font(DesignTokens.Typography.micro(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.secondaryText)
 
             HStack {
@@ -50,19 +52,19 @@ struct TaskEditorPopover: View {
                     dismiss()
                 }
                 .buttonStyle(.plain)
-                .font(DesignTokens.Typography.caption)
+                .font(DesignTokens.Typography.caption(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.secondaryText)
 
                 Button(saveLabel) {
                     save()
                 }
                 .buttonStyle(.plain)
-                .font(DesignTokens.Typography.captionStrong)
+                .font(DesignTokens.Typography.captionStrong(in: density))
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
             }
         }
-        .padding(16)
-        .frame(width: DesignTokens.Size.taskEditorWidth)
+        .padding(DesignTokens.scaled(16, in: density))
+        .frame(width: DesignTokens.Size.scaledTaskEditorWidth(in: density))
     }
 
     private func save() {
@@ -79,22 +81,24 @@ enum TaskTagChipStyle {
 }
 
 struct TaskTagChip: View {
+    @Environment(\.interfaceDensity) private var density
+
     let text: String
     let style: TaskTagChipStyle
 
     var body: some View {
         Text(text)
-            .font(DesignTokens.Typography.dueDateTag)
+            .font(DesignTokens.Typography.dueDateTag(in: density))
             .foregroundStyle(foregroundColor)
-            .padding(.horizontal, DesignTokens.Spacing.dueDateTagHorizontal)
-            .padding(.vertical, DesignTokens.Spacing.dueDateTagVertical)
+            .padding(.horizontal, DesignTokens.Spacing.scaledDueDateTagHorizontal(in: density))
+            .padding(.vertical, DesignTokens.Spacing.scaledDueDateTagVertical(in: density))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledDueDateTag(in: density), style: .continuous)
                     .fill(backgroundColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.dueDateTag, style: .continuous)
-                    .strokeBorder(borderColor, lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledDueDateTag(in: density), style: .continuous)
+                    .strokeBorder(borderColor, lineWidth: DesignTokens.Stroke.scaledDueDateOutlineLineWidth(in: density))
             )
     }
 

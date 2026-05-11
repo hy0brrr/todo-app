@@ -4,13 +4,18 @@ import AppKit
 @main
 struct TodoAppApp: App {
     @State private var viewModel = TodoViewModel()
+    @AppStorage("todoApp.denseModeEnabled") private var denseModeEnabled = false
 
     private let releasesURL = URL(string: "https://github.com/hy0brrr/todo-app/releases")!
+    private var interfaceDensity: InterfaceDensity {
+        denseModeEnabled ? .dense : .regular
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(viewModel)
+                .environment(\.interfaceDensity, interfaceDensity)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 400, height: 750)
@@ -38,18 +43,19 @@ struct TodoAppApp: App {
                 }
             }
 
-            // Custom Partition menu
-            CommandMenu("Partition") {
+            CommandMenu("Settings") {
                 Button("New Partition...") {
                     viewModel.addPartition()
                 }
                 .keyboardShortcut("n", modifiers: .command)
 
-                Divider()
-
                 Button("Manage Partitions...") {
                     viewModel.showManagePartitions = true
                 }
+
+                Divider()
+
+                Toggle("Dense Mode", isOn: $denseModeEnabled)
             }
         }
 #if DEBUG

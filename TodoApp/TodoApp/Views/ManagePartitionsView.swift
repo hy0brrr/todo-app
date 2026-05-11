@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ManagePartitionsView: View {
+    @Environment(\.interfaceDensity) private var density
+
     @Binding var partitions: [Partition]
     let onDelete: (String) -> Void
     let onDismiss: () -> Void
@@ -13,33 +15,33 @@ struct ManagePartitionsView: View {
             // Header
             HStack {
                 Text("Manage Partitions")
-                    .font(DesignTokens.Typography.modalTitle)
+                    .font(DesignTokens.Typography.modalTitle(in: density))
                     .foregroundStyle(DesignTokens.ColorRole.primaryText)
                 Spacer()
                 Button {
                     onDismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(DesignTokens.Typography.caption)
+                        .font(DesignTokens.Typography.caption(in: density))
                         .foregroundStyle(DesignTokens.ColorRole.secondaryText)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, DesignTokens.Spacing.modalHorizontal)
-            .padding(.vertical, DesignTokens.Spacing.modalHeaderVertical)
+            .padding(.horizontal, DesignTokens.Spacing.scaledModalHorizontal(in: density))
+            .padding(.vertical, DesignTokens.Spacing.scaledModalHeaderVertical(in: density))
 
             Divider().opacity(DesignTokens.Stroke.dividerOpacity)
 
             // Partition list
             List {
                 ForEach(partitions) { partition in
-                    HStack(spacing: 10) {
+                    HStack(spacing: DesignTokens.scaled(10, in: density)) {
                         Image(systemName: "line.3.horizontal")
-                            .font(DesignTokens.Typography.micro)
+                            .font(DesignTokens.Typography.micro(in: density))
                             .foregroundStyle(DesignTokens.ColorRole.secondaryText)
 
                         Text(partition.name.isEmpty ? "Untitled" : partition.name)
-                            .font(DesignTokens.Typography.bodyMedium)
+                            .font(DesignTokens.Typography.bodyMedium(in: density))
                             .foregroundStyle(DesignTokens.ColorRole.primaryText)
 
                         Spacer()
@@ -50,7 +52,7 @@ struct ManagePartitionsView: View {
                             showDeleteConfirmation = true
                         } label: {
                             Image(systemName: "trash")
-                                .font(DesignTokens.Typography.caption)
+                                .font(DesignTokens.Typography.caption(in: density))
                                 .foregroundStyle(
                                     canDeletePartitions
                                         ? DesignTokens.ColorRole.secondaryText
@@ -65,7 +67,7 @@ struct ManagePartitionsView: View {
                                 : "At least one partition is required"
                         )
                     }
-                    .padding(.vertical, DesignTokens.Spacing.modalListRowVertical)
+                    .padding(.vertical, DesignTokens.Spacing.scaledModalListRowVertical(in: density))
                 }
                 .onMove { source, destination in
                     partitions.move(fromOffsets: source, toOffset: destination)
@@ -89,15 +91,15 @@ struct ManagePartitionsView: View {
                 .controlSize(.small)
                 .buttonStyle(.borderedProminent)
             }
-            .padding(.horizontal, DesignTokens.Spacing.modalHorizontal)
-            .padding(.vertical, DesignTokens.Spacing.modalFooterVertical)
+            .padding(.horizontal, DesignTokens.Spacing.scaledModalHorizontal(in: density))
+            .padding(.vertical, DesignTokens.Spacing.scaledModalFooterVertical(in: density))
         }
         .background(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledCard(in: density), style: .continuous)
                 .fill(.ultraThinMaterial)
         )
-        .frame(minHeight: DesignTokens.Size.modalMinHeight, maxHeight: DesignTokens.Size.modalMaxHeight)
-        .frame(width: DesignTokens.Size.modalWidth)
+        .frame(minHeight: DesignTokens.Size.scaledModalMinHeight(in: density), maxHeight: DesignTokens.Size.scaledModalMaxHeight(in: density))
+        .frame(width: DesignTokens.Size.scaledModalWidth(in: density))
         .alert("Delete Partition?", isPresented: $showDeleteConfirmation, presenting: partitionToDelete) { partition in
             Button("Cancel", role: .cancel) {
                 partitionToDelete = nil

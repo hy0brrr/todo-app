@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PartitionEditView: View {
+    @Environment(\.interfaceDensity) private var density
+
     let partition: Partition
     let onSave: (String) -> Void
 
@@ -14,8 +16,8 @@ struct PartitionEditView: View {
     }
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.cardHeaderRuleGap) {
-            HStack(alignment: .center, spacing: DesignTokens.Spacing.cardHeaderGap) {
+        VStack(spacing: DesignTokens.Spacing.scaledCardHeaderRuleGap(in: density)) {
+            HStack(alignment: .center, spacing: DesignTokens.Spacing.scaledCardHeaderGap(in: density)) {
                 TextField(
                     "",
                     text: $editName,
@@ -23,11 +25,11 @@ struct PartitionEditView: View {
                         .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
                 )
                 .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.captionStrong)
-                .padding(.horizontal, DesignTokens.Spacing.inputHorizontal)
-                .frame(height: DesignTokens.Size.trailingControl)
+                .font(DesignTokens.Typography.captionStrong(in: density))
+                .padding(.horizontal, DesignTokens.Spacing.scaledInputHorizontal(in: density))
+                .frame(height: DesignTokens.Size.scaledTrailingControl(in: density))
                 .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.field, style: .continuous)
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.scaledField(in: density), style: .continuous)
                         .fill(DesignTokens.ColorRole.inputBackground)
                 )
                 .foregroundStyle(DesignTokens.ColorRole.primaryText)
@@ -42,26 +44,26 @@ struct PartitionEditView: View {
                     onSave(editName.isEmpty ? "Untitled" : editName)
                 } label: {
                     Image(systemName: "checkmark")
-                        .font(DesignTokens.Typography.icon)
+                        .font(DesignTokens.Typography.icon(in: density))
                         .foregroundStyle(DesignTokens.ColorRole.primaryText)
                         .frame(
-                            width: DesignTokens.Size.trailingControl,
-                            height: DesignTokens.Size.trailingControl
+                            width: DesignTokens.Size.scaledTrailingControl(in: density),
+                            height: DesignTokens.Size.scaledTrailingControl(in: density)
                         )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.leading, DesignTokens.Spacing.partitionHeaderContentLeadingInset)
-            .frame(height: DesignTokens.Size.trailingControl, alignment: .leading)
+            .padding(.leading, DesignTokens.Spacing.scaledPartitionHeaderContentLeadingInset(in: density))
+            .frame(height: DesignTokens.Size.scaledTrailingControl(in: density), alignment: .leading)
 
             Rectangle()
                 .fill(DesignTokens.ColorRole.headerRule)
-                .frame(height: DesignTokens.Stroke.headerRuleLineWidth)
+                .frame(height: DesignTokens.Stroke.scaledHeaderRuleLineWidth(in: density))
         }
-        .padding(.horizontal, DesignTokens.Spacing.sectionPaddingHorizontal)
-        .padding(.top, DesignTokens.Spacing.cardHeaderTop)
-        .padding(.bottom, DesignTokens.Spacing.cardHeaderBottom)
+        .padding(.horizontal, DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density))
+        .padding(.top, DesignTokens.Spacing.scaledCardHeaderTop(in: density))
+        .padding(.bottom, DesignTokens.Spacing.scaledCardHeaderBottom(in: density))
         .background(DesignTokens.ColorRole.editPanelBackground)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
