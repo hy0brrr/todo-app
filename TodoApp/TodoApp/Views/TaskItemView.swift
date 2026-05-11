@@ -501,6 +501,18 @@ enum TaskItemRenderMode {
     case completed
 }
 
+enum FallingTaskCoordinateSpace {
+    static let name = "fallingTaskSpace"
+}
+
+struct TaskItemFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, newValue in newValue })
+    }
+}
+
 enum StarMarkerFillStyle: Equatable {
     case clear
     case dueDateUrgentTag
@@ -789,6 +801,16 @@ struct TaskItemView: View {
                     )
                     .fixedSize()
                     .padding(.trailing, trailingGap(after: index, segments: segments))
+                }
+            }
+        }
+        .background {
+            if renderMode == .active {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: TaskItemFramePreferenceKey.self,
+                        value: [task.id: proxy.frame(in: .named(FallingTaskCoordinateSpace.name))]
+                    )
                 }
             }
         }

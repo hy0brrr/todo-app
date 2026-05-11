@@ -48,32 +48,148 @@ private struct EmptyTodoIllustration: View {
     }
 }
 
+enum TextEditingCommandBridge {
+    static func selector(
+        forCharactersIgnoringModifiers characters: String?,
+        modifierFlags: NSEvent.ModifierFlags
+    ) -> Selector? {
+        let flags = modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags == [.command], let character = characters?.lowercased() else {
+            return nil
+        }
+
+        switch character {
+        case "x":
+            return #selector(NSText.cut(_:))
+        case "c":
+            return #selector(NSText.copy(_:))
+        case "v":
+            return #selector(NSText.paste(_:))
+        case "a":
+            return #selector(NSText.selectAll(_:))
+        default:
+            return nil
+        }
+    }
+
+    static func performKeyEquivalent(_ event: NSEvent, in textField: NSTextField) -> Bool {
+        guard
+            let editor = textField.currentEditor(),
+            let selector = selector(
+                forCharactersIgnoringModifiers: event.charactersIgnoringModifiers,
+                modifierFlags: event.modifierFlags
+            )
+        else {
+            return false
+        }
+
+        NSApp.sendAction(selector, to: editor, from: textField)
+        return true
+    }
+}
+
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard let editor = currentEditor() else {
-            return super.performKeyEquivalent(with: event)
+        if TextEditingCommandBridge.performKeyEquivalent(event, in: self) {
+            return true
         }
 
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags == [.command], let characters = event.charactersIgnoringModifiers?.lowercased() else {
-            return super.performKeyEquivalent(with: event)
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+private final class AddTaskTextField: NSTextField {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if TextEditingCommandBridge.performKeyEquivalent(event, in: self) {
+            return true
         }
 
-        switch characters {
-        case "x":
-            NSApp.sendAction(#selector(NSText.cut(_:)), to: editor, from: self)
-            return true
-        case "c":
-            NSApp.sendAction(#selector(NSText.copy(_:)), to: editor, from: self)
-            return true
-        case "v":
-            NSApp.sendAction(#selector(NSText.paste(_:)), to: editor, from: self)
-            return true
-        case "a":
-            NSApp.sendAction(#selector(NSText.selectAll(_:)), to: editor, from: self)
-            return true
-        default:
-            return super.performKeyEquivalent(with: event)
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+private struct AddTaskInputField: NSViewRepresentable {
+    @Binding var text: String
+    let prompt: String
+    let density: InterfaceDensity
+    let onSubmit: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onSubmit: onSubmit)
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = AddTaskTextField(frame: .zero)
+        textField.delegate = context.coordinator
+        context.coordinator.textField = textField
+        configure(textField)
+        textField.stringValue = text
+        return textField
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        configure(nsView)
+        if nsView.currentEditor() == nil, nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+    }
+
+    private func configure(_ textField: NSTextField) {
+        textField.isEditable = true
+        textField.isSelectable = true
+        textField.isBezeled = false
+        textField.isBordered = false
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.backgroundColor = .clear
+        textField.textColor = NSColor(DesignTokens.ColorRole.primaryText)
+        textField.placeholderString = prompt
+        textField.font = taskDraftNSFont
+        textField.alignment = .left
+        textField.lineBreakMode = .byTruncatingTail
+        textField.maximumNumberOfLines = 1
+        textField.usesSingleLineMode = true
+        textField.cell?.font = taskDraftNSFont
+        textField.cell?.lineBreakMode = .byTruncatingTail
+        textField.cell?.wraps = false
+        textField.cell?.isScrollable = true
+        textField.cell?.usesSingleLineMode = true
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    }
+
+    private var taskDraftNSFont: NSFont {
+        let fontSize = DesignTokens.Typography.bodySize(in: density)
+        if let customFont = NSFont(name: "PingFangSC-Regular", size: fontSize) {
+            return customFont
+        }
+
+        return .systemFont(ofSize: fontSize, weight: .regular)
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        @Binding var text: String
+        let onSubmit: () -> Void
+        weak var textField: NSTextField?
+
+        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+            self._text = text
+            self.onSubmit = onSubmit
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            text = textField.stringValue
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                text = textView.string
+                onSubmit()
+                return true
+            }
+
+            return false
         }
     }
 }
@@ -396,21 +512,12 @@ struct PartitionView: View {
                 )
                 .offset(x: DesignTokens.Spacing.addTaskPlusOpticalOffsetX)
 
-            TextField(
-                "",
+            AddTaskInputField(
                 text: $newTaskName,
-                prompt: Text("Add task to \(partition.name.isEmpty ? "Untitled" : partition.name) with [tag]")
-                .foregroundStyle(DesignTokens.ColorRole.tertiaryText)
+                prompt: "Add task to \(partition.name.isEmpty ? "Untitled" : partition.name) with [tag]",
+                density: density,
+                onSubmit: submitNewTask
             )
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body(in: density))
-                .foregroundStyle(DesignTokens.ColorRole.primaryText)
-                .onSubmit {
-                    let trimmed = newTaskName.trimmingCharacters(in: .whitespaces)
-                    guard !trimmed.isEmpty else { return }
-                    onAddTask(partition.id, trimmed)
-                    newTaskName = ""
-                }
         }
         .padding(.horizontal, DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density))
         .padding(.vertical, DesignTokens.scaled(6, in: density))
@@ -501,6 +608,13 @@ struct PartitionView: View {
         DispatchQueue.main.async {
             focusedChildDraftParentTaskId = parentTaskId
         }
+    }
+
+    private func submitNewTask() {
+        let trimmed = newTaskName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        onAddTask(partition.id, trimmed)
+        newTaskName = ""
     }
 
     private func createInlineChildTask() {

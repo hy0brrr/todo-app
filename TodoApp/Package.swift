@@ -10,6 +10,9 @@ let package = Package(
         .executableTarget(
             name: "TodoApp",
             path: "TodoApp",
+            exclude: [
+                "Assets.xcassets"
+            ],
             resources: [
                 .process("Resources")
             ]

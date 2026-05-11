@@ -291,6 +291,19 @@ class TodoViewModel {
             .flatMap { [$0.rootTask] + $0.children }
     }
 
+    func fallingCompletionPayload(for taskId: String) -> [TodoTask] {
+        guard let task = task(withId: taskId), !task.isCompleted else { return [] }
+
+        if task.isRootTask {
+            let incompleteChildren = children(of: task.id)
+                .filter { !$0.isCompleted }
+                .sorted(by: activeTaskSort)
+            return [task] + incompleteChildren
+        }
+
+        return [task]
+    }
+
     // MARK: - Task Actions
 
     func addTask(partitionId: String, name: String, tags: [String] = []) {

@@ -4,6 +4,7 @@ struct CompletedSectionView: View {
     @Environment(\.interfaceDensity) private var density
 
     let groups: [CompletedTaskGroup]
+    let showsFallingCompletionCanvas: Bool
     let onSaveTask: (String, String) -> Void
     let onAddChildTask: (String, String) -> Void
     let onToggleComplete: (String) -> Void
@@ -25,8 +26,10 @@ struct CompletedSectionView: View {
             .padding(.top, DesignTokens.Spacing.scaledCardHeaderTop(in: density))
             .padding(.bottom, DesignTokens.Spacing.scaledCardHeaderBottom(in: density))
 
-            // Completed tasks list
-            if groups.isEmpty {
+            if showsFallingCompletionCanvas {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if groups.isEmpty {
                 EmptyTodoPlaceholderView()
             } else {
                 ScrollView {
@@ -122,6 +125,14 @@ struct CompletedSectionView: View {
         Rectangle()
             .fill(DesignTokens.ColorRole.headerRule)
             .frame(height: DesignTokens.Stroke.scaledHeaderRuleLineWidth(in: density))
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: CompletedDividerFramePreferenceKey.self,
+                        value: proxy.frame(in: .named(FallingTaskCoordinateSpace.name))
+                    )
+                }
+            }
     }
 }
 
@@ -143,6 +154,7 @@ struct CompletedSectionView: View {
                 showsParentContext: true
             )
         ],
+        showsFallingCompletionCanvas: false,
         onSaveTask: { _, _ in },
         onAddChildTask: { _, _ in },
         onToggleComplete: { _ in }

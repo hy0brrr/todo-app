@@ -5,6 +5,7 @@ import AppKit
 struct TodoAppApp: App {
     @State private var viewModel = TodoViewModel()
     @AppStorage("todoApp.denseModeEnabled") private var denseModeEnabled = false
+    @AppStorage("todoApp.fallingCompletedEnabled") private var fallingCompletedEnabled = false
 
     private let releasesURL = URL(string: "https://github.com/hy0brrr/todo-app/releases")!
     private var interfaceDensity: InterfaceDensity {
@@ -56,6 +57,7 @@ struct TodoAppApp: App {
                 Divider()
 
                 Toggle("Dense Mode", isOn: $denseModeEnabled)
+                Toggle("Falling Completed", isOn: $fallingCompletedEnabled)
             }
         }
 #if DEBUG

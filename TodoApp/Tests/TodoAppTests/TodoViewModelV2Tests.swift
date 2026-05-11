@@ -509,6 +509,47 @@ final class TodoViewModelV2Tests: XCTestCase {
         XCTAssertEqual(Set(viewModel.completedTaskGroups.first?.completedChildren.map(\.id) ?? []), Set(["child-a", "child-b"]))
     }
 
+    func testFallingCompletionPayloadForParentIncludesParentAndIncompleteChildrenOnly() {
+        let viewModel = makeViewModel(
+            tasks: [
+                TodoTask(id: "root-work", partitionId: "work", name: "Parent"),
+                TodoTask(id: "child-a", partitionId: "work", name: "Child A", parentTaskId: "root-work"),
+                TodoTask(id: "child-b", partitionId: "work", name: "Child B", parentTaskId: "root-work", isCompleted: true, completedAt: Date(timeIntervalSince1970: 50))
+            ]
+        )
+
+        let payload = viewModel.fallingCompletionPayload(for: "root-work")
+
+        XCTAssertEqual(payload.map(\.id), ["root-work", "child-a"])
+    }
+
+    func testFallingCompletionPayloadForChildIncludesOnlyThatChild() {
+        let viewModel = makeViewModel(
+            tasks: [
+                TodoTask(id: "root-work", partitionId: "work", name: "Parent"),
+                TodoTask(id: "child-a", partitionId: "work", name: "Child A", parentTaskId: "root-work"),
+                TodoTask(id: "child-b", partitionId: "work", name: "Child B", parentTaskId: "root-work")
+            ]
+        )
+
+        let payload = viewModel.fallingCompletionPayload(for: "child-a")
+
+        XCTAssertEqual(payload.map(\.id), ["child-a"])
+    }
+
+    func testFallingCompletionPayloadIgnoresAlreadyCompletedTask() {
+        let viewModel = makeViewModel(
+            tasks: [
+                TodoTask(id: "root-work", partitionId: "work", name: "Parent"),
+                TodoTask(id: "child-a", partitionId: "work", name: "Child A", parentTaskId: "root-work", isCompleted: true, completedAt: Date(timeIntervalSince1970: 50))
+            ]
+        )
+
+        let payload = viewModel.fallingCompletionPayload(for: "child-a")
+
+        XCTAssertTrue(payload.isEmpty)
+    }
+
     func testUncompletingChildFromCompletedRootReturnsParentAndChildToActiveSection() throws {
         let viewModel = makeViewModel(
             tasks: [

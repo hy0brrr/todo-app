@@ -17,6 +17,7 @@
 		A1000008 /* PartitionEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008 /* PartitionEditView.swift */; };
 		A1000009 /* CompletedSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000009 /* CompletedSectionView.swift */; };
 		A100000A /* ManagePartitionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000A /* ManagePartitionsView.swift */; };
+		A1000015 /* FallingCompletedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000015 /* FallingCompletedView.swift */; };
 		A100000B /* DateHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B /* DateHelpers.swift */; };
 		A100000C /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* DesignTokens.swift */; };
 		A100000D /* WindowChromeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* WindowChromeController.swift */; };
@@ -27,6 +28,7 @@
 		A1000012 /* ChildTaskOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* ChildTaskOrdering.swift */; };
 		A1000013 /* TodoPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* TodoPersistenceStore.swift */; };
 		A1000014 /* empty-todo.svg in Resources */ = {isa = PBXBuildFile; fileRef = B1000014 /* empty-todo.svg */; };
+		A1000016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000016 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +43,7 @@
 		B1000008 /* PartitionEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartitionEditView.swift; sourceTree = "<group>"; };
 		B1000009 /* CompletedSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSectionView.swift; sourceTree = "<group>"; };
 		B100000A /* ManagePartitionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePartitionsView.swift; sourceTree = "<group>"; };
+		B1000015 /* FallingCompletedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallingCompletedView.swift; sourceTree = "<group>"; };
 		B100000B /* DateHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateHelpers.swift; sourceTree = "<group>"; };
 		B100000C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		B100000D /* WindowChromeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowChromeController.swift; sourceTree = "<group>"; };
@@ -51,6 +54,7 @@
 		B1000012 /* ChildTaskOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildTaskOrdering.swift; sourceTree = "<group>"; };
 		B1000013 /* TodoPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoPersistenceStore.swift; sourceTree = "<group>"; };
 		B1000014 /* empty-todo.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "empty-todo.svg"; sourceTree = "<group>"; };
+		B1000016 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +80,7 @@
 			isa = PBXGroup;
 			children = (
 				B1000001 /* TodoAppApp.swift */,
+				B1000016 /* Assets.xcassets */,
 				E1000003 /* Models */,
 				E1000004 /* ViewModels */,
 				E1000005 /* Views */,
@@ -110,6 +115,7 @@
 				B1000007 /* PartitionView.swift */,
 				B1000008 /* PartitionEditView.swift */,
 				B1000009 /* CompletedSectionView.swift */,
+				B1000015 /* FallingCompletedView.swift */,
 				B100000A /* ManagePartitionsView.swift */,
 				B100000E /* LiquidGlassTag.swift */,
 				B100000F /* TaskEditorPopover.swift */,
@@ -201,6 +207,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000014 /* empty-todo.svg in Resources */,
+				A1000016 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +227,7 @@
 				A1000007 /* PartitionView.swift in Sources */,
 				A1000008 /* PartitionEditView.swift in Sources */,
 				A1000009 /* CompletedSectionView.swift in Sources */,
+				A1000015 /* FallingCompletedView.swift in Sources */,
 				A100000A /* ManagePartitionsView.swift in Sources */,
 				A100000B /* DateHelpers.swift in Sources */,
 				A100000C /* DesignTokens.swift in Sources */,
@@ -353,8 +361,6 @@
 		F7000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -382,8 +388,7 @@
 		F7000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconRelease;
 				CODE_SIGN_ENTITLEMENTS = "";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;

@@ -4,6 +4,12 @@ import AppKit
 struct ContentView: View {
     @Environment(TodoViewModel.self) private var viewModel
     @Environment(\.interfaceDensity) private var density
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("todoApp.fallingCompletedEnabled") private var fallingCompletedEnabled = false
+    @State private var fallingCompletionBursts: [FallingCompletionBurst] = []
+    @State private var taskFrames: [String: CGRect] = [:]
+    @State private var completedFrame: CGRect?
+    @State private var completedDividerFrame: CGRect?
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -30,31 +36,66 @@ struct ContentView: View {
                         handleGap: DesignTokens.Spacing.scaledCardGap(in: density)
                     )
 
-                    VStack(spacing: 0) {
-                        partitionStack(maxTotalPartitionHeights: layout.maxTotalPartitionHeights)
-                            .frame(maxWidth: .infinity)
-                            .modifier(
-                                PartitionAreaScrollModifier(
-                                    isScrollable: layout.shouldScrollPartitions
+                    ZStack(alignment: .top) {
+                        VStack(spacing: 0) {
+                            partitionStack(maxTotalPartitionHeights: layout.maxTotalPartitionHeights)
+                                .frame(maxWidth: .infinity)
+                                .modifier(
+                                    PartitionAreaScrollModifier(
+                                        isScrollable: layout.shouldScrollPartitions
+                                    )
                                 )
-                            )
-                            .frame(height: layout.partitionsAreaHeight)
+                                .frame(height: layout.partitionsAreaHeight)
 
-                        CompletedSectionView(
-                            groups: viewModel.completedTaskGroups,
-                            onSaveTask: { id, rawText in
-                                viewModel.updateTask(id: id, rawText: rawText)
-                            },
-                            onAddChildTask: { parentId, name in
-                                viewModel.addChildTask(parentTaskId: parentId, rawText: name)
-                            },
-                            onToggleComplete: { viewModel.toggleComplete($0) }
-                        )
-                        .frame(height: layout.completedHeight)
+                            CompletedSectionView(
+                                groups: viewModel.completedTaskGroups,
+                                showsFallingCompletionCanvas: fallingCompletedEnabled,
+                                onSaveTask: { id, rawText in
+                                    viewModel.updateTask(id: id, rawText: rawText)
+                                },
+                                onAddChildTask: { parentId, name in
+                                    viewModel.addChildTask(parentTaskId: parentId, rawText: name)
+                                },
+                                onToggleComplete: completeTask
+                            )
+                            .frame(height: layout.completedHeight)
+                            .background {
+                                GeometryReader { proxy in
+                                    Color.clear.preference(
+                                        key: CompletedCardFramePreferenceKey.self,
+                                        value: proxy.frame(in: .named(FallingTaskCoordinateSpace.name))
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, DesignTokens.Spacing.scaledScreenHorizontalInset(in: density))
+                        .padding(.top, topInset)
+                        .padding(.bottom, bottomInset)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                        if fallingCompletedEnabled {
+                            FallingCompletedView(
+                                completedTasks: viewModel.completedTasks.map { FallingCompletedTaskSnapshot(task: $0) },
+                                bursts: fallingCompletionBursts,
+                                completedFrame: completedFrame,
+                                completedDividerFrame: completedDividerFrame,
+                                reduceMotion: reduceMotion,
+                                density: density
+                            )
+                            .allowsHitTesting(false)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
                     }
-                    .padding(.horizontal, DesignTokens.Spacing.scaledScreenHorizontalInset(in: density))
-                    .padding(.top, topInset)
-                    .padding(.bottom, bottomInset)
+                    .coordinateSpace(name: FallingTaskCoordinateSpace.name)
+                    .onPreferenceChange(TaskItemFramePreferenceKey.self) { frames in
+                        taskFrames = frames
+                    }
+                    .onPreferenceChange(CompletedCardFramePreferenceKey.self) { frame in
+                        completedFrame = frame
+                    }
+                    .onPreferenceChange(CompletedDividerFramePreferenceKey.self) { frame in
+                        completedDividerFrame = frame
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
             }
@@ -134,7 +175,7 @@ struct ContentView: View {
                     onAddChildTask: { parentId, name in
                         viewModel.addChildTask(parentTaskId: parentId, rawText: name)
                     },
-                    onToggleComplete: { viewModel.toggleComplete($0) },
+                    onToggleComplete: completeTask,
                     onToggleStar: { viewModel.toggleStar($0) },
                     onSetDueDate: { id, date in viewModel.setDueDate(id, date: date) },
                     onSaveTask: { id, rawText in
@@ -157,6 +198,43 @@ struct ContentView: View {
                 .frame(height: DesignTokens.Spacing.scaledCardGap(in: density))
             }
         }
+    }
+
+    private func completeTask(_ taskId: String) {
+        let fallingPayload = fallingCompletedEnabled
+            ? viewModel.fallingCompletionPayload(for: taskId)
+            : []
+
+        viewModel.toggleComplete(taskId)
+
+        guard fallingCompletedEnabled, !fallingPayload.isEmpty else { return }
+        fallingCompletionBursts.append(
+            FallingCompletionBurst(
+                tasks: fallingPayload.map { task in
+                    FallingCompletedTaskSnapshot(task: task, sourceFrame: taskFrames[task.id])
+                }
+            )
+        )
+
+        if fallingCompletionBursts.count > 24 {
+            fallingCompletionBursts.removeFirst(fallingCompletionBursts.count - 24)
+        }
+    }
+}
+
+private struct CompletedCardFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
+    }
+}
+
+struct CompletedDividerFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
     }
 }
 
