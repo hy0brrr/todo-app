@@ -6,13 +6,12 @@ This project focuses on a lightweight sidebar-style task experience with custom 
 
 ## Current version
 
-The current public milestone is **V2**.
+The current public milestone is **V3**.
 
-Main additions in V2:
+Main additions in V3:
 
-- Tags
-- Parent-child task hierarchy
-- Refined completed-task flow
+- Falling Completed mode, where tasks drop into the Completed section with a playful letter-by-letter effect.
+- Dense Mode, a tighter visual layout for people who want more task context on screen.
 
 ## What this app supports
 
@@ -22,11 +21,14 @@ Main additions in V2:
 - Parent tasks and child tasks
 - Child-task due dates
 - Parent-context display for completed child tasks
+- Optional Falling Completed animation mode
+- Optional Dense Mode
 
 ## Releases
 
 - [MVP](https://github.com/hy0brrr/todo-app/releases/tag/v1.0.0-mvp)
 - [V2](https://github.com/hy0brrr/todo-app/releases/tag/v2.0.0)
+- [V3](https://github.com/hy0brrr/todo-app/releases/tag/v3.0)
 
 ## Packaging
 
@@ -38,7 +40,11 @@ Build the release DMG with:
 
 The script produces `dist/tidy-macOS-v<version>.dmg`, mounts as `tidy`, and configures a standard drag-to-Applications Finder layout.
 
-More packaging details live in [docs/release/dmg-packaging.md](/Users/huanyun.wang/Desktop/Git/todo-app/docs/release/dmg-packaging.md).
+More packaging details live in [docs/release/dmg-packaging.md](docs/release/dmg-packaging.md).
+
+## License
+
+This project is available under the [MIT License](LICENSE).
 
 ## Notes
 
@@ -58,3 +64,6 @@ More packaging details live in [docs/release/dmg-packaging.md](/Users/huanyun.wa
 - V2 marked the completion of two major additions:
   - Tags
   - Parent-child hierarchy
+- V3 marked the completion of two visual interaction additions:
+  - Falling Completed mode
+  - Dense Mode
