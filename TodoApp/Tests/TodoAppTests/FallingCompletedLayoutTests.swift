@@ -66,33 +66,6 @@ final class FallingCompletedLayoutTests: XCTestCase {
         }
     }
 
-    func testInitialCompletedDropPositionsStartAboveFloorAndSpreadAcrossCard() {
-        let bounds = CGRect(x: 42, y: 20, width: 684, height: 650)
-        let visibleBounds = CGRect(x: 42, y: 20, width: 684, height: 448)
-        let positions = (0..<5).map {
-            FallingCompletedLayout.initialDropPosition(
-                visibleIndex: $0,
-                totalVisibleCount: 5,
-                rowIndex: 1,
-                physicsBounds: bounds,
-                visibleBounds: visibleBounds,
-                fontSize: 18
-            )
-        }
-
-        XCTAssertEqual(positions.map { round($0.x) }, [156, 270, 384, 498, 612])
-        XCTAssertTrue(positions.allSatisfy { $0.y > bounds.minY + 260 })
-        XCTAssertTrue(positions.allSatisfy { $0.y < visibleBounds.maxY })
-    }
-
-    func testInitialCompletedDropDelayIsStaggeredByRowAndLetter() {
-        XCTAssertEqual(
-            FallingCompletedLayout.initialDropDelay(sourceIndex: 2, rowIndex: 3),
-            0.37,
-            accuracy: 0.0001
-        )
-    }
-
     func testPhysicsBoundsInsetCompletedCardSidesAndFloor() {
         let bounds = FallingCompletedLayout.physicsBounds(
             for: CGRect(x: 26, y: 740, width: 716, height: 480),
@@ -176,5 +149,33 @@ final class FallingCompletedLayoutTests: XCTestCase {
             letterFrames: [],
             triggerY: 1039
         ))
+    }
+
+    func testInitialCompletedHistoryDoesNotSeedFallingCanvas() {
+        let tasks = [
+            TodoTask(id: "oldest", partitionId: "work", name: "Oldest", isCompleted: true, completedAt: Date(timeIntervalSince1970: 10)),
+            TodoTask(id: "newest", partitionId: "work", name: "Newest", isCompleted: true, completedAt: Date(timeIntervalSince1970: 40)),
+            TodoTask(id: "second", partitionId: "work", name: "Second", isCompleted: true, completedAt: Date(timeIntervalSince1970: 30)),
+            TodoTask(id: "third", partitionId: "work", name: "Third", isCompleted: true, completedAt: Date(timeIntervalSince1970: 20))
+        ]
+
+        XCTAssertTrue(FallingCompletedInitialCanvas.tasks(from: tasks).isEmpty)
+    }
+
+    func testInitialCompletedCanvasIsEmptyWithoutCompletedHistory() {
+        let tasks = [
+            TodoTask(id: "active", partitionId: "work", name: "Active")
+        ]
+
+        XCTAssertTrue(FallingCompletedInitialCanvas.tasks(from: tasks).isEmpty)
+    }
+
+    func testFallingModeToggleClearsPendingBursts() {
+        let burst = FallingCompletionBurst(tasks: [
+            FallingCompletedTaskSnapshot(task: TodoTask(id: "done", partitionId: "work", name: "Done"))
+        ])
+
+        XCTAssertTrue(FallingCompletedCanvasState.bursts([burst], afterModeChangeFrom: false, to: true).isEmpty)
+        XCTAssertTrue(FallingCompletedCanvasState.bursts([burst], afterModeChangeFrom: true, to: false).isEmpty)
     }
 }

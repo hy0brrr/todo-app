@@ -74,8 +74,9 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                         if fallingCompletedEnabled {
+                            let completedTasks = viewModel.completedTasks
                             FallingCompletedView(
-                                completedTasks: viewModel.completedTasks.map { FallingCompletedTaskSnapshot(task: $0) },
+                                completedTasks: completedTasks.map { FallingCompletedTaskSnapshot(task: $0) },
                                 bursts: fallingCompletionBursts,
                                 completedFrame: completedFrame,
                                 completedDividerFrame: completedDividerFrame,
@@ -115,6 +116,13 @@ struct ContentView: View {
                 partitions: $viewModel.partitions,
                 onDelete: { viewModel.deletePartition($0) },
                 onDismiss: { viewModel.showManagePartitions = false }
+            )
+        }
+        .onChange(of: fallingCompletedEnabled) { oldValue, newValue in
+            fallingCompletionBursts = FallingCompletedCanvasState.bursts(
+                fallingCompletionBursts,
+                afterModeChangeFrom: oldValue,
+                to: newValue
             )
         }
     }

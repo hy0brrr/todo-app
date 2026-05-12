@@ -31,4 +31,25 @@ final class TextEditingCommandBridgeTests: XCTestCase {
             )
         )
     }
+
+    func testAddTaskInputAppliesClearedBindingWhileEditorIsActive() {
+        XCTAssertEqual(
+            AddTaskInputSynchronization.textFieldValueToApply(
+                displayedText: "New task",
+                bindingText: "",
+                isEditing: true
+            ),
+            ""
+        )
+    }
+
+    func testAddTaskInputDoesNotOverwriteActiveTypingWithStaleBinding() {
+        XCTAssertNil(
+            AddTaskInputSynchronization.textFieldValueToApply(
+                displayedText: "New task",
+                bindingText: "New",
+                isEditing: true
+            )
+        )
+    }
 }

@@ -88,6 +88,18 @@ enum TextEditingCommandBridge {
     }
 }
 
+enum AddTaskInputSynchronization {
+    static func textFieldValueToApply(
+        displayedText: String,
+        bindingText: String,
+        isEditing: Bool
+    ) -> String? {
+        guard displayedText != bindingText else { return nil }
+        guard !isEditing || bindingText.isEmpty else { return nil }
+        return bindingText
+    }
+}
+
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if TextEditingCommandBridge.performKeyEquivalent(event, in: self) {
@@ -129,8 +141,15 @@ private struct AddTaskInputField: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
         configure(nsView)
-        if nsView.currentEditor() == nil, nsView.stringValue != text {
-            nsView.stringValue = text
+        let editor = nsView.currentEditor()
+        let displayedText = editor?.string ?? nsView.stringValue
+        if let value = AddTaskInputSynchronization.textFieldValueToApply(
+            displayedText: displayedText,
+            bindingText: text,
+            isEditing: editor != nil
+        ) {
+            nsView.stringValue = value
+            editor?.string = value
         }
     }
 
@@ -186,6 +205,10 @@ private struct AddTaskInputField: NSViewRepresentable {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 text = textView.string
                 onSubmit()
+                if text.isEmpty {
+                    textView.string = ""
+                    (control as? NSTextField)?.stringValue = ""
+                }
                 return true
             }
 

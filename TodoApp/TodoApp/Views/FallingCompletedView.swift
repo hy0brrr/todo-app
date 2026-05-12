@@ -21,6 +21,22 @@ struct FallingCompletionBurst: Identifiable, Equatable {
     let tasks: [FallingCompletedTaskSnapshot]
 }
 
+enum FallingCompletedInitialCanvas {
+    static func tasks(from completedTasks: [TodoTask]) -> [FallingCompletedTaskSnapshot] {
+        []
+    }
+}
+
+enum FallingCompletedCanvasState {
+    static func bursts(
+        _ bursts: [FallingCompletionBurst],
+        afterModeChangeFrom oldValue: Bool,
+        to newValue: Bool
+    ) -> [FallingCompletionBurst] {
+        oldValue == newValue ? bursts : []
+    }
+}
+
 enum FallingCompletedLayout {
     static let completedCardInset: CGFloat = 16
     static let sweepDividerClearance: CGFloat = 16
@@ -75,33 +91,6 @@ enum FallingCompletedLayout {
     static func releaseDelay(sourceIndex: Int, visibleCount: Int, rowIndex: Int) -> Double {
         let rightToLeftIndex = max(visibleCount - sourceIndex - 1, 0)
         return Double(rightToLeftIndex) * 0.018 + Double(rowIndex) * 0.09
-    }
-
-    static func initialDropPosition(
-        visibleIndex: Int,
-        totalVisibleCount: Int,
-        rowIndex: Int,
-        physicsBounds: CGRect,
-        visibleBounds: CGRect,
-        fontSize: CGFloat
-    ) -> CGPoint {
-        let clampedCount = max(totalVisibleCount, 1)
-        let horizontalStep = physicsBounds.width / CGFloat(clampedCount + 1)
-        let x = physicsBounds.minX + horizontalStep * CGFloat(visibleIndex + 1)
-        let naturalDropHeight = max(visibleBounds.height * 0.72, fontSize * 12)
-        let y = min(
-            visibleBounds.maxY - fontSize * 1.8,
-            physicsBounds.minY + naturalDropHeight + CGFloat(rowIndex) * fontSize * 0.8
-        )
-
-        return CGPoint(
-            x: min(max(x, physicsBounds.minX + fontSize), physicsBounds.maxX - fontSize),
-            y: max(y, physicsBounds.minY + fontSize)
-        )
-    }
-
-    static func initialDropDelay(sourceIndex: Int, rowIndex: Int) -> Double {
-        Double(rowIndex) * 0.11 + Double(sourceIndex) * 0.02
     }
 
     static func physicsBounds(for completedFrame: CGRect?, sceneSize: CGSize, inset: CGFloat) -> CGRect {
@@ -342,17 +331,6 @@ fileprivate final class FallingCompletedScene: SKScene {
             node.removeFromParent()
         }
         emittedTaskIds.formIntersection(taskIds)
-
-        for task in tasks where !emittedTaskIds.contains(task.id) {
-            if addTask(
-                task,
-                mode: reduceMotion ? .settled : .initialDrop,
-                rowIndex: emittedTaskIds.count,
-                sourceFrame: nil
-            ) {
-                emittedTaskIds.insert(task.id)
-            }
-        }
         trimIfNeeded()
     }
 
@@ -361,7 +339,6 @@ fileprivate final class FallingCompletedScene: SKScene {
             guard !emittedTaskIds.contains(task.id) else { continue }
             if addTask(
                 task,
-                mode: reduceMotion ? .settled : .falling,
                 rowIndex: index,
                 sourceFrame: task.sourceFrame
             ) {
@@ -371,16 +348,9 @@ fileprivate final class FallingCompletedScene: SKScene {
         trimIfNeeded()
     }
 
-    private enum AddMode {
-        case falling
-        case initialDrop
-        case settled
-    }
-
     @discardableResult
     private func addTask(
         _ task: FallingCompletedTaskSnapshot,
-        mode: AddMode,
         rowIndex: Int,
         sourceFrame: CGRect?
     ) -> Bool {
@@ -388,22 +358,6 @@ fileprivate final class FallingCompletedScene: SKScene {
         guard !characters.isEmpty, size.width > 0, size.height > 0 else { return false }
 
         let fontSize = DesignTokens.Typography.bodySize(in: density)
-        let sourcePoint = FallingCompletedLayout.scenePoint(for: sourceFrame, sceneSize: size)
-        let startX = mode == .falling
-            ? sourcePoint.x
-            : physicsBounds.minX
-                + DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density)
-                + DesignTokens.Spacing.scaledRowHorizontal(in: density)
-                + CGFloat(task.depth) * DesignTokens.Spacing.scaledChildTaskIndent(in: density)
-                + DesignTokens.Size.scaledCheckboxTapTarget(in: density)
-        let maxLineWidth = max(physicsBounds.maxX - startX - DesignTokens.Spacing.scaledSectionPaddingHorizontal(in: density), 80)
-        let visibleCharacters = characters.filter { !$0.isWhitespace }
-        let approximateAdvance = fontSize * 0.58
-        let totalWidth = min(CGFloat(visibleCharacters.count) * approximateAdvance, maxLineWidth)
-        let lineStartX = min(startX, max(physicsBounds.minX + DesignTokens.scaled(10, in: density), physicsBounds.maxX - totalWidth - 8))
-        let baseY = mode == .falling
-            ? sourcePoint.y - DesignTokens.scaled(CGFloat(rowIndex * 12), in: density)
-            : floorY + DesignTokens.scaled(12 + CGFloat((emittedTaskIds.count % 4) * 9), in: density)
         let fallingPositions = FallingCompletedLayout.letterPositions(
             count: characters.count,
             sourceFrame: sourceFrame,
@@ -427,31 +381,11 @@ fileprivate final class FallingCompletedScene: SKScene {
             label.horizontalAlignmentMode = .center
             label.zRotation = jitter(max: 0.22)
 
-            let unclampedX = lineStartX + CGFloat(visibleIndex) * approximateAdvance
-            let x = clampedLetterX(unclampedX)
-            if mode == .falling {
-                let point = fallingPositions[min(sourceIndex, max(fallingPositions.count - 1, 0))]
-                label.position = CGPoint(
-                    x: clampedLetterX(point.x),
-                    y: max(point.y + jitter(max: 2), floorY + fontSize)
-                )
-            } else if mode == .initialDrop {
-                let point = FallingCompletedLayout.initialDropPosition(
-                    visibleIndex: visibleIndex,
-                    totalVisibleCount: visibleCharacters.count,
-                    rowIndex: rowIndex,
-                    physicsBounds: physicsBounds,
-                    visibleBounds: completedVisibleBounds,
-                    fontSize: fontSize
-                )
-                label.position = CGPoint(
-                    x: clampedLetterX(point.x + jitter(max: fontSize * 0.9)),
-                    y: point.y + jitter(max: fontSize * 0.75)
-                )
-            } else {
-                let y = baseY + jitter(max: 5)
-                label.position = CGPoint(x: x, y: y)
-            }
+            let point = fallingPositions[min(sourceIndex, max(fallingPositions.count - 1, 0))]
+            label.position = CGPoint(
+                x: clampedLetterX(point.x),
+                y: max(point.y + jitter(max: 2), floorY + fontSize)
+            )
 
             let bodySize = FallingCompletedPhysics.letterBodySize(for: label.frame.size, fontSize: fontSize)
             label.physicsBody = SKPhysicsBody(rectangleOf: bodySize)
@@ -464,41 +398,28 @@ fileprivate final class FallingCompletedScene: SKScene {
             label.physicsBody?.linearDamping = 0.34
             label.physicsBody?.angularDamping = 0.42
 
-            if mode == .falling || mode == .initialDrop {
-                label.alpha = 0
-                label.physicsBody?.affectedByGravity = false
-                addChild(label)
-                let delay = mode == .falling
-                    ? FallingCompletedLayout.releaseDelay(
-                        sourceIndex: sourceIndex,
-                        visibleCount: characters.count,
-                        rowIndex: rowIndex
-                    )
-                    : FallingCompletedLayout.initialDropDelay(
-                        sourceIndex: visibleIndex,
-                        rowIndex: rowIndex
-                    )
-                let release = SKAction.run { [weak label, weak self] in
-                    guard let label, let self else { return }
-                    label.physicsBody?.affectedByGravity = true
-                    let horizontalJitter: CGFloat = mode == .initialDrop ? 120 : 32
-                    let verticalJitter: CGFloat = mode == .initialDrop ? 34 : 18
-                    label.physicsBody?.velocity = CGVector(
-                        dx: self.jitter(max: horizontalJitter),
-                        dy: self.jitter(max: verticalJitter)
-                    )
-                    label.physicsBody?.angularVelocity = self.jitter(max: 3.2)
-                }
-                label.run(.sequence([
-                    .wait(forDuration: delay),
-                    .fadeAlpha(to: 1, duration: 0.08),
-                    release
-                ]))
-            } else {
-                label.physicsBody?.affectedByGravity = false
-                label.physicsBody?.isDynamic = false
-                addChild(label)
+            label.alpha = 0
+            label.physicsBody?.affectedByGravity = false
+            addChild(label)
+            let delay = FallingCompletedLayout.releaseDelay(
+                sourceIndex: sourceIndex,
+                visibleCount: characters.count,
+                rowIndex: rowIndex
+            )
+            let release = SKAction.run { [weak label, weak self] in
+                guard let label, let self else { return }
+                label.physicsBody?.affectedByGravity = true
+                label.physicsBody?.velocity = CGVector(
+                    dx: self.jitter(max: 32),
+                    dy: self.jitter(max: 18)
+                )
+                label.physicsBody?.angularVelocity = self.jitter(max: 3.2)
             }
+            label.run(.sequence([
+                .wait(forDuration: delay),
+                .fadeAlpha(to: 1, duration: 0.08),
+                release
+            ]))
 
             visibleIndex += 1
         }
