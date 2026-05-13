@@ -23,6 +23,26 @@ final class TextEditingCommandBridgeTests: XCTestCase {
         )
     }
 
+    func testCommandZMapsToUndoCommand() {
+        XCTAssertEqual(
+            TextEditingCommandBridge.action(
+                forCharactersIgnoringModifiers: "z",
+                modifierFlags: [.command]
+            ),
+            .undo
+        )
+    }
+
+    func testCommandShiftZMapsToRedoCommand() {
+        XCTAssertEqual(
+            TextEditingCommandBridge.action(
+                forCharactersIgnoringModifiers: "z",
+                modifierFlags: [.command, .shift]
+            ),
+            .redo
+        )
+    }
+
     func testNonCommandKeyDoesNotMapToTextEditingSelector() {
         XCTAssertNil(
             TextEditingCommandBridge.selector(
@@ -50,6 +70,13 @@ final class TextEditingCommandBridgeTests: XCTestCase {
                 bindingText: "New",
                 isEditing: true
             )
+        )
+    }
+
+    func testDraftInputCommandHandlingTreatsEscapeAsCancel() {
+        XCTAssertEqual(
+            DraftTaskInputCommandHandling.action(for: #selector(NSResponder.cancelOperation(_:))),
+            .cancel
         )
     }
 }

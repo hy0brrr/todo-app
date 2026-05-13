@@ -3,31 +3,11 @@ import AppKit
 
 private final class InlineEditingTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard let editor = currentEditor() else {
-            return super.performKeyEquivalent(with: event)
+        if TextEditingCommandBridge.performKeyEquivalent(event, in: self) {
+            return true
         }
 
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags == [.command], let characters = event.charactersIgnoringModifiers?.lowercased() else {
-            return super.performKeyEquivalent(with: event)
-        }
-
-        switch characters {
-        case "x":
-            NSApp.sendAction(#selector(NSText.cut(_:)), to: editor, from: self)
-            return true
-        case "c":
-            NSApp.sendAction(#selector(NSText.copy(_:)), to: editor, from: self)
-            return true
-        case "v":
-            NSApp.sendAction(#selector(NSText.paste(_:)), to: editor, from: self)
-            return true
-        case "a":
-            NSApp.sendAction(#selector(NSText.selectAll(_:)), to: editor, from: self)
-            return true
-        default:
-            return super.performKeyEquivalent(with: event)
-        }
+        return super.performKeyEquivalent(with: event)
     }
 }
 
@@ -156,6 +136,7 @@ private struct InlineTaskNameEditor: NSViewRepresentable {
 
         func controlTextDidBeginEditing(_ obj: Notification) {
             didBeginEditing = true
+            ((obj.object as? NSTextField)?.currentEditor() as? NSTextView)?.allowsUndo = true
         }
 
         func controlTextDidEndEditing(_ obj: Notification) {

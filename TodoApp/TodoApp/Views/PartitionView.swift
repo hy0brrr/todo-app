@@ -48,34 +48,64 @@ private struct EmptyTodoIllustration: View {
     }
 }
 
+enum TextEditingCommandAction: Equatable {
+    case selector(Selector)
+    case undo
+    case redo
+}
+
 enum TextEditingCommandBridge {
+    static func action(
+        forCharactersIgnoringModifiers characters: String?,
+        modifierFlags: NSEvent.ModifierFlags
+    ) -> TextEditingCommandAction? {
+        let flags = modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard let character = characters?.lowercased() else {
+            return nil
+        }
+
+        if flags == [.command] {
+            switch character {
+            case "x":
+                return .selector(#selector(NSText.cut(_:)))
+            case "c":
+                return .selector(#selector(NSText.copy(_:)))
+            case "v":
+                return .selector(#selector(NSText.paste(_:)))
+            case "a":
+                return .selector(#selector(NSText.selectAll(_:)))
+            case "z":
+                return .undo
+            default:
+                return nil
+            }
+        }
+
+        if flags == [.command, .shift], character == "z" {
+            return .redo
+        }
+
+        return nil
+    }
+
     static func selector(
         forCharactersIgnoringModifiers characters: String?,
         modifierFlags: NSEvent.ModifierFlags
     ) -> Selector? {
-        let flags = modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags == [.command], let character = characters?.lowercased() else {
+        guard case .selector(let selector) = action(
+            forCharactersIgnoringModifiers: characters,
+            modifierFlags: modifierFlags
+        ) else {
             return nil
         }
 
-        switch character {
-        case "x":
-            return #selector(NSText.cut(_:))
-        case "c":
-            return #selector(NSText.copy(_:))
-        case "v":
-            return #selector(NSText.paste(_:))
-        case "a":
-            return #selector(NSText.selectAll(_:))
-        default:
-            return nil
-        }
+        return selector
     }
 
     static func performKeyEquivalent(_ event: NSEvent, in textField: NSTextField) -> Bool {
         guard
             let editor = textField.currentEditor(),
-            let selector = selector(
+            let action = action(
                 forCharactersIgnoringModifiers: event.charactersIgnoringModifiers,
                 modifierFlags: event.modifierFlags
             )
@@ -83,8 +113,45 @@ enum TextEditingCommandBridge {
             return false
         }
 
-        NSApp.sendAction(selector, to: editor, from: textField)
-        return true
+        switch action {
+        case .selector(let selector):
+            NSApp.sendAction(selector, to: editor, from: textField)
+            return true
+        case .undo:
+            undoManager(for: editor)?.undo()
+            return true
+        case .redo:
+            undoManager(for: editor)?.redo()
+            return true
+        }
+    }
+
+    private static func undoManager(for editor: NSText) -> UndoManager? {
+        if let textView = editor as? NSTextView {
+            return textView.undoManager ?? textView.window?.undoManager
+        }
+
+        return editor.undoManager
+    }
+}
+
+enum DraftTaskInputCommandAction: Equatable {
+    case submit
+    case cancel
+    case unhandled
+}
+
+enum DraftTaskInputCommandHandling {
+    static func action(for commandSelector: Selector) -> DraftTaskInputCommandAction {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            return .submit
+        }
+
+        if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+            return .cancel
+        }
+
+        return .unhandled
     }
 }
 
@@ -125,9 +192,17 @@ private struct AddTaskInputField: NSViewRepresentable {
     let prompt: String
     let density: InterfaceDensity
     let onSubmit: () -> Void
+    var focusOnAppear: Bool = false
+    var onCancel: (() -> Void)?
+    var onEndEditing: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit)
+        Coordinator(
+            text: $text,
+            onSubmit: onSubmit,
+            onCancel: onCancel,
+            onEndEditing: onEndEditing
+        )
     }
 
     func makeNSView(context: Context) -> NSTextField {
@@ -150,6 +225,13 @@ private struct AddTaskInputField: NSViewRepresentable {
         ) {
             nsView.stringValue = value
             editor?.string = value
+        }
+
+        if focusOnAppear, nsView.currentEditor() == nil {
+            DispatchQueue.main.async {
+                guard nsView.window != nil else { return }
+                nsView.window?.makeFirstResponder(nsView)
+            }
         }
     }
 
@@ -189,11 +271,21 @@ private struct AddTaskInputField: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextFieldDelegate {
         @Binding var text: String
         let onSubmit: () -> Void
+        let onCancel: (() -> Void)?
+        let onEndEditing: (() -> Void)?
         weak var textField: NSTextField?
+        private var didFinishFromCommand = false
 
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+        init(
+            text: Binding<String>,
+            onSubmit: @escaping () -> Void,
+            onCancel: (() -> Void)?,
+            onEndEditing: (() -> Void)?
+        ) {
             self._text = text
             self.onSubmit = onSubmit
+            self.onCancel = onCancel
+            self.onEndEditing = onEndEditing
         }
 
         func controlTextDidChange(_ obj: Notification) {
@@ -201,8 +293,26 @@ private struct AddTaskInputField: NSViewRepresentable {
             text = textField.stringValue
         }
 
+        func controlTextDidBeginEditing(_ obj: Notification) {
+            ((obj.object as? NSTextField)?.currentEditor() as? NSTextView)?.allowsUndo = true
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            text = textField.stringValue
+
+            defer {
+                didFinishFromCommand = false
+            }
+
+            guard !didFinishFromCommand else { return }
+            onEndEditing?()
+        }
+
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            switch DraftTaskInputCommandHandling.action(for: commandSelector) {
+            case .submit:
+                didFinishFromCommand = true
                 text = textView.string
                 onSubmit()
                 if text.isEmpty {
@@ -210,9 +320,19 @@ private struct AddTaskInputField: NSViewRepresentable {
                     (control as? NSTextField)?.stringValue = ""
                 }
                 return true
-            }
 
-            return false
+            case .cancel:
+                guard let onCancel else { return false }
+                didFinishFromCommand = true
+                text = ""
+                textView.string = ""
+                (control as? NSTextField)?.stringValue = ""
+                onCancel()
+                return true
+
+            case .unhandled:
+                return false
+            }
         }
     }
 }
@@ -561,15 +681,15 @@ struct PartitionView: View {
                 .frame(width: leadingControlWidth, height: DesignTokens.Size.scaledCheckboxTapTarget(in: density), alignment: .leading)
                 .offset(x: DesignTokens.Spacing.addTaskPlusOpticalOffsetX)
 
-            TextField("", text: $childDraftText, prompt: Text("Add subtask with [tag]")
-                .foregroundStyle(DesignTokens.ColorRole.tertiaryText))
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body(in: density))
-                .foregroundStyle(DesignTokens.ColorRole.primaryText)
-                .focused($focusedChildDraftParentTaskId, equals: parentTaskId)
-                .onSubmit {
-                    createInlineChildTask()
-                }
+            AddTaskInputField(
+                text: $childDraftText,
+                prompt: "Add subtask with [tag]",
+                density: density,
+                onSubmit: createInlineChildTask,
+                focusOnAppear: childDraftParentTaskId == parentTaskId,
+                onCancel: resetInlineChildDraft,
+                onEndEditing: finalizeInlineChildTaskCreation
+            )
         }
         .padding(.leading, DesignTokens.Spacing.scaledChildTaskIndent(in: density))
         .padding(.horizontal, DesignTokens.Spacing.scaledRowHorizontal(in: density))
